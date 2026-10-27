@@ -263,13 +263,6 @@ class AudioPlayerManager(private val context: Context) {
         return 0
     }
 
-    // Broad, overlapping frequency regions approximate tonal shaping; they do not
-    // isolate vocals, drums, bass, or other stems from a mixed recording.
-    private fun frequencyWeight(frequencyHz: Double, centerHz: Double, widthOctaves: Double): Double {
-        val octaves = kotlin.math.ln(frequencyHz / centerHz) / kotlin.math.ln(2.0)
-        return kotlin.math.exp(-0.5 * (octaves / widthOctaves) * (octaves / widthOctaves))
-    }
-
     fun applyDspSettings(settings: DspSettings) {
         currentDspSettings = settings
         try {
@@ -285,15 +278,7 @@ class AudioPlayerManager(private val context: Context) {
                     val frequencyHz = (eq.getCenterFreq(hardwareIndex.toShort()).toDouble() / 1000.0)
                         .coerceAtLeast(1.0)
                     val baseLevelMb = interpolateEqLevel(settings.bands, frequencyHz)
-                    val mixerLevelMb =
-                        settings.bassGainDb * 100.0 * frequencyWeight(frequencyHz, 80.0, 1.45) +
-                        settings.drumGainDb * 100.0 * frequencyWeight(frequencyHz, 150.0, 1.35) +
-                        settings.vocalGainDb * 100.0 * frequencyWeight(frequencyHz, 1800.0, 1.45) +
-                        settings.instrumentGainDb * 100.0 * frequencyWeight(frequencyHz, 900.0, 1.8) +
-                        settings.effectGainDb * 100.0 * frequencyWeight(frequencyHz, 9000.0, 1.35)
-
-                    val clamped = (baseLevelMb + mixerLevelMb.toInt())
-                        .coerceIn(minLevel, maxLevel).toShort()
+                    val clamped = baseLevelMb.coerceIn(minLevel, maxLevel).toShort()
                     eq.setBandLevel(hardwareIndex.toShort(), clamped)
                 }
             }
