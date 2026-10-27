@@ -2,6 +2,7 @@ package com.example.data
 
 import android.content.ContentUris
 import android.content.Context
+import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.provider.MediaStore
 import android.util.Base64
@@ -120,4 +121,20 @@ object MusicCatalog {
         return deviceTracks
     }
 
+
+    private fun readEmbeddedLyrics(context: Context, uri: Uri): String {
+        val retriever = MediaMetadataRetriever()
+        return try {
+            retriever.setDataSource(context, uri)
+            (
+                retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_LYRIC)
+                    ?: retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_LYRICS)
+            )?.trim().orEmpty()
+        } catch (e: Exception) {
+            Log.w("MusicCatalog", "Embedded lyrics unavailable for $uri", e)
+            ""
+        } finally {
+            try { retriever.release() } catch (_: Exception) { }
+        }
+    }
 }
