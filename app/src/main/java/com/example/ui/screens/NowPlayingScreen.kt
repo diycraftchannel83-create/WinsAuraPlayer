@@ -467,10 +467,10 @@ fun NowPlayingScreen(
         Spacer(modifier = Modifier.height(10.dp))
 
         // Track title & artist
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Text(
-                text = track.title,
-                modifier = Modifier.clickable {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable {
                     val values = mutableMapOf<String, String>()
                     val retriever = MediaMetadataRetriever()
                     try {
@@ -503,7 +503,11 @@ fun NowPlayingScreen(
                     editableTags.putAll(values)
                     tagStatus = null
                     showTagEditor = true
-                },
+                }
+        ) {
+            Text(
+                text = track.title,
+                modifier = Modifier.fillMaxWidth(),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = TextPrimary,
@@ -564,7 +568,7 @@ fun NowPlayingScreen(
         // DSP Status Badges
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically
         ) {
             if (dspSettings.isBassBoostEnabled) {
@@ -572,8 +576,8 @@ fun NowPlayingScreen(
                     modifier = Modifier
                         .clip(RoundedCornerShape(6.dp))
                         .background(AccentMagenta.copy(alpha = 0.15f))
-                        .weight(1f)
-                        .padding(horizontal = 4.dp, vertical = 6.dp)
+                        
+                        .padding(horizontal = 8.dp, vertical = 6.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
                         Icon(
@@ -601,7 +605,7 @@ fun NowPlayingScreen(
                         .weight(1f)
                         .padding(horizontal = 4.dp, vertical = 6.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
                         Icon(
                             imageVector = Icons.Default.SurroundSound,
                             contentDescription = null,
@@ -624,8 +628,8 @@ fun NowPlayingScreen(
                     .clip(RoundedCornerShape(6.dp))
                     .background(AccentAmber.copy(alpha = 0.15f))
                     .clickable { onOpenDsp() }
-                    .weight(1f)
-                    .padding(horizontal = 4.dp, vertical = 6.dp)
+                    
+                    .padding(horizontal = 8.dp, vertical = 6.dp)
             ) {
                 Text(
                     text = "EQ: ${dspSettings.currentPresetName}",
