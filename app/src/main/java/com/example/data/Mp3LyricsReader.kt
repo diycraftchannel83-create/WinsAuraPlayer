@@ -31,7 +31,7 @@ object Mp3LyricsReader {
         }
     }
 
-    private fun readLyricsFromId3Tag(input: InputStream): String {
+    internal fun readLyricsFromId3Tag(input: InputStream): String {
         val header = ByteArray(10)
         if (!readFully(input, header)) return ""
         if (header[0] != 'I'.code.toByte() ||
