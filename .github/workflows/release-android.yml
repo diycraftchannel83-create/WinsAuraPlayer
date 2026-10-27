@@ -29,7 +29,7 @@ jobs:
           cache: gradle
 
       - name: Install Android SDK command-line tools
-        shell: pwsh
+        shell: powershell
         run: |
           $ErrorActionPreference = "Stop"
           $SdkRoot = Join-Path $env:USERPROFILE ".android\sdk"
@@ -122,7 +122,7 @@ jobs:
           ls -lah release-assets
 
       - name: Save build files on this PC
-        shell: pwsh
+        shell: powershell
         run: |
           $destination = Join-Path $env:USERPROFILE ("WinsAuraPlayer-builds\" + $env:GITHUB_RUN_NUMBER)
           New-Item -ItemType Directory -Force -Path $destination | Out-Null
