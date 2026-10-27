@@ -617,68 +617,80 @@ fun NowPlayingScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // DSP Status Badges
+        // DSP status indicators: three equal-width slots, balanced left-to-right.
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (dspSettings.isBassBoostEnabled) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(AccentMagenta.copy(alpha = 0.15f))
-                    .padding(horizontal = 8.dp, vertical = 6.dp)
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background((if (dspSettings.isBassBoostEnabled) AccentMagenta else TextTertiary).copy(alpha = 0.15f))
+                    .padding(horizontal = 4.dp, vertical = 7.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-                        Icon(
-                            imageVector = Icons.Default.Waves,
-                            contentDescription = null,
-                            tint = AccentMagenta,
-                            modifier = Modifier.size(11.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "BASS +${(dspSettings.bassBoostStrength / 10f).toInt()}%",
-                            color = AccentMagenta,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-            }
-
-            if (dspSettings.isVirtualizerEnabled) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(NeonCyan.copy(alpha = 0.15f))
-                        .padding(horizontal = 4.dp, vertical = 6.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-                        Icon(
-                            imageVector = Icons.Default.SurroundSound,
-                            contentDescription = null,
-                            tint = NeonCyan,
-                            modifier = Modifier.size(11.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "DOLBY 3D ${(dspSettings.virtualizerStrength / 10f).toInt()}%",
-                            color = NeonCyan,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Default.Waves,
+                        contentDescription = null,
+                        tint = if (dspSettings.isBassBoostEnabled) AccentMagenta else TextTertiary,
+                        modifier = Modifier.size(11.dp)
+                    )
+                    Spacer(modifier = Modifier.width(3.dp))
+                    Text(
+                        text = if (dspSettings.isBassBoostEnabled) "BASS +${(dspSettings.bassBoostStrength / 10f).toInt()}%" else "BASS OFF",
+                        color = if (dspSettings.isBassBoostEnabled) AccentMagenta else TextTertiary,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
 
             Box(
                 modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background((if (dspSettings.isVirtualizerEnabled) NeonCyan else TextTertiary).copy(alpha = 0.15f))
+                    .padding(horizontal = 4.dp, vertical = 7.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.SurroundSound,
+                        contentDescription = null,
+                        tint = if (dspSettings.isVirtualizerEnabled) NeonCyan else TextTertiary,
+                        modifier = Modifier.size(11.dp)
+                    )
+                    Spacer(modifier = Modifier.width(3.dp))
+                    Text(
+                        text = if (dspSettings.isVirtualizerEnabled) "DOLBY ${(dspSettings.virtualizerStrength / 10f).toInt()}%" else "DOLBY OFF",
+                        color = if (dspSettings.isVirtualizerEnabled) NeonCyan else TextTertiary,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
                     .clip(RoundedCornerShape(6.dp))
                     .background(AccentAmber.copy(alpha = 0.15f))
                     .clickable { onOpenDsp() }
-                    .padding(horizontal = 8.dp, vertical = 6.dp)
+                    .padding(horizontal = 4.dp, vertical = 7.dp),
+                contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = "EQ: ${dspSettings.currentPresetName}",
