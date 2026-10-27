@@ -150,6 +150,10 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
         updateDspSettings(updated)
     }
 
+    fun refreshVisualizer() {
+        playerManager.refreshVisualizer()
+    }
+
     fun changeVisualizerMode(mode: VisualizerMode) {
         _visualizerMode.value = mode
     }
