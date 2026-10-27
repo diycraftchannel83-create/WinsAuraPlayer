@@ -3,6 +3,8 @@ package com.example
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
@@ -29,6 +31,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -88,6 +93,15 @@ fun MainAppContent(
     val appOpenAdVisible by viewModel.appOpenAdVisible.collectAsStateWithLifecycle()
     val interstitialAdVisible by viewModel.interstitialAdVisible.collectAsStateWithLifecycle()
     val isNowPlayingExpanded by viewModel.isNowPlayingExpanded.collectAsStateWithLifecycle()
+    val stemNames by viewModel.stemNames.collectAsStateWithLifecycle()
+    var pendingStemChannel by remember { mutableIntStateOf(-1) }
+    val stemPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        val channel = pendingStemChannel
+        if (uri != null && channel >= 0) viewModel.loadStem(channel, uri)
+        pendingStemChannel = -1
+    }
 
     Box(modifier = Modifier.fillMaxSize().background(androidx.compose.material3.MaterialTheme.colorScheme.background)) {
         Scaffold(
@@ -276,7 +290,13 @@ fun MainAppContent(
                     NavigationTab.DSP_STUDIO -> {
                         DspEqualizerScreen(
                             dspSettings = dspSettings,
-                            onUpdateDspSettings = { viewModel.updateDspSettings(it) }
+                            onUpdateDspSettings = { viewModel.updateDspSettings(it) },
+                            stemNames = stemNames,
+                            onPickStem = { channel ->
+                                pendingStemChannel = channel
+                                stemPicker.launch(arrayOf("audio/*"))
+                            },
+                            onClearStems = { viewModel.clearStems() }
                         )
                     }
 
