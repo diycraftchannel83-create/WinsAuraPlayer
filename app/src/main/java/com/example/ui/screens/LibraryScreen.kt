@@ -73,6 +73,7 @@ fun LibraryScreen(
     val context = LocalContext.current
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf("Semua") } // "Semua", "Perangkat"
+    var selectedGrouping by remember { mutableStateOf("Lagu") } // "Lagu", "Artis", "Album"
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -229,6 +230,35 @@ fun LibraryScreen(
                     }
                 }
 
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Library organization: flat song list, grouped by artist, or grouped by album.
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("Lagu", "Artis", "Album").forEach { grouping ->
+                        val isSelected = selectedGrouping == grouping
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(if (isSelected) NeonCyan.copy(alpha = 0.2f) else StudioCard)
+                                .border(1.dp, if (isSelected) NeonCyan else DividerColor, RoundedCornerShape(10.dp))
+                                .clickable { selectedGrouping = grouping }
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                                .testTag("group_$grouping")
+                        ) {
+                            Text(
+                                text = when (grouping) {
+                                    "Artis" -> "By Artis"
+                                    "Album" -> "By Album"
+                                    else -> "Daftar Lagu"
+                                },
+                                color = if (isSelected) NeonCyan else TextSecondary,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                fontSize = 12.sp
+                            )
+                        }
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(14.dp))
             }
         }
@@ -257,8 +287,8 @@ fun LibraryScreen(
                     }
                 }
             }
-        } else {
-            items(filteredTracks) { track ->
+        } else if (selectedGrouping == "Lagu") {
+            items(filteredTracks, key = { it.id }) { track ->
                 val isCurrent = currentTrack?.id == track.id
                 TrackItemRow(
                     track = track,
@@ -266,6 +296,36 @@ fun LibraryScreen(
                     isPlaying = isCurrent && isPlaying,
                     onSelect = { onTrackSelect(track) }
                 )
+            }
+        } else {
+            val groupedTracks = if (selectedGrouping == "Artis") {
+                filteredTracks.groupBy { it.artist.trim().ifBlank { "Artis tidak diketahui" } }
+                    .toSortedMap(String.CASE_INSENSITIVE_ORDER)
+            } else {
+                filteredTracks.groupBy { it.album.trim().ifBlank { "Album tidak diketahui" } }
+                    .toSortedMap(String.CASE_INSENSITIVE_ORDER)
+            }
+            groupedTracks.forEach { (groupName, groupTracks) ->
+                item(key = "group_header_" + selectedGrouping + "_" + groupName) {
+                    Text(
+                        text = "$groupName  •  " + groupTracks.size + " lagu",
+                        color = NeonCyan,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 6.dp)
+                    )
+                }
+                items(groupTracks, key = { selectedGrouping + "_" + it.id }) { track ->
+                    val isCurrent = currentTrack?.id == track.id
+                    TrackItemRow(
+                        track = track,
+                        isCurrent = isCurrent,
+                        isPlaying = isCurrent && isPlaying,
+                        onSelect = { onTrackSelect(track) }
+                    )
+                }
             }
         }
     }
