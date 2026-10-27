@@ -84,7 +84,7 @@ fun SettingsScreen(
             })
         }
 
-        Card(onClick = { editingTrack = tracks.firstOrNull() }, modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
+        Card(onClick = { if (tracks.isNotEmpty()) editingTrack = tracks.first() else status = "Pindai pustaka musik terlebih dahulu untuk mengedit tag." }, modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
             Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Icon(Icons.Default.Edit, contentDescription = null)
                 Column(Modifier.weight(1f)) {
@@ -148,7 +148,7 @@ fun SettingsScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Offset: ${offset.toInt()} ms")
                     Slider(value = offset, onValueChange = { offset = it }, valueRange = -5000f..5000f, steps = 99)
-                    Text("Nilai negatif memajukan lirik; nilai positif menunda lirik.", style = MaterialTheme.typography.bodySmall)
+                    Text("Nilai positif memajukan tampilan lirik; nilai negatif menundanya.", style = MaterialTheme.typography.bodySmall)
                 }
             },
             confirmButton = {
