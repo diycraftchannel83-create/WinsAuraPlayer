@@ -401,57 +401,6 @@ fun DspEqualizerScreen(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // Channel Mixer
-        Card(
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = StudioCardElevated),
-            border = androidx.compose.foundation.BorderStroke(1.dp, DividerColor),
-            modifier = Modifier.fillMaxWidth().testTag("channel_mixer_card")
-        ) {
-            Column(modifier = Modifier.padding(12.dp)) {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(imageVector = Icons.Default.GraphicEq, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(22.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = "Mixer Tonal", fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 15.sp)
-                    }
-                    IconButton(onClick = { onUpdateDspSettings(dspSettings.copy(vocalGainDb = 0, drumGainDb = 2, bassGainDb = 4, instrumentGainDb = 0, effectGainDb = -2)) }, modifier = Modifier.testTag("reset_channel_mixer")) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Reset mixer", tint = NeonCyan)
-                    }
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.Top) {
-                    val channels = listOf(
-                        Triple("Vokal", "🎙", dspSettings.vocalGainDb),
-                        Triple("Drum", "🥁", dspSettings.drumGainDb),
-                        Triple("Bass", "🎸", dspSettings.bassGainDb),
-                        Triple("Instrumen", "🎹", dspSettings.instrumentGainDb),
-                        Triple("Treble", "✨", dspSettings.effectGainDb)
-                    )
-                    channels.forEachIndexed { index, channel ->
-                        Column(modifier = Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).background(StudioCard).border(1.dp, DividerColor, RoundedCornerShape(10.dp)).padding(horizontal = 3.dp, vertical = 8.dp).testTag("mixer_channel_$index"), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(channel.second, fontSize = 18.sp, maxLines = 1)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(channel.first, color = TextPrimary, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
-                            Text(text = "${if (channel.third > 0) "+" else ""}${channel.third} dB", color = NeonCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                            VerticalBandSlider(value = channel.third * 100, enabled = dspSettings.isEnabled, onValueChange = { raw ->
-                                val gain = (raw / 100).coerceIn(-12, 12)
-                                val updated = when (index) {
-                                    0 -> dspSettings.copy(vocalGainDb = gain)
-                                    1 -> dspSettings.copy(drumGainDb = gain)
-                                    2 -> dspSettings.copy(bassGainDb = gain)
-                                    3 -> dspSettings.copy(instrumentGainDb = gain)
-                                    else -> dspSettings.copy(effectGainDb = gain)
-                                }
-                                onUpdateDspSettings(updated)
-                            }, modifier = Modifier.fillMaxWidth().height(108.dp).testTag("mixer_fader_$index"), maxValue = 1200)
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(text = "Kontrol tonal global: bukan pemisahan stem. Vokal, drum, dan instrumen tidak dapat diatur sepenuhnya secara terpisah dari lagu campuran.", color = TextTertiary, fontSize = 10.sp, lineHeight = 14.sp)
-            }
-        }
         Spacer(modifier = Modifier.height(80.dp)) // padding for bottom bars
     }
 }
