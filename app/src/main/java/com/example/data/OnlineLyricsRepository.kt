@@ -95,7 +95,8 @@ object OnlineLyricsRepository {
     }
 
     private fun String.fileSafePart(): String =
-        replace(Regex("[\\\\/:*?\\"<>|\\u0000-\\u001F]"), "_")
+        replace(Regex("""[\\\\/:*?"<>|]"""), "_")
+            .replace(Regex("[\\u0000-\\u001F]"), "_")
             .trim()
             .trim('.')
             .take(80)
