@@ -60,7 +60,7 @@ jobs:
           } >> "$GITHUB_ENV"
 
       - name: Build release APK and AAB
-        run: ./gradlew --no-daemon clean assembleRelease bundleRelease
+        run: gradle --no-daemon clean assembleRelease bundleRelease
 
       - name: Rename release files
         shell: bash
