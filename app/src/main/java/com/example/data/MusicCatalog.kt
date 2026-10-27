@@ -2,11 +2,43 @@ package com.example.data
 
 import android.content.ContentUris
 import android.content.Context
+import android.media.MediaMetadataRetriever
+import android.os.Build
+import org.json.JSONArray
+import org.json.JSONObject
 import android.net.Uri
 import android.provider.MediaStore
 import com.example.model.Track
 
 object MusicCatalog {
+    private const val PREFS_NAME = "wins_aura_library"
+    private const val LIBRARY_KEY = "saved_tracks"
+
+    fun loadSavedTracks(context: Context): List<Track> {
+        return try {
+            val raw = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getString(LIBRARY_KEY, null) ?: return emptyList()
+            val array = JSONArray(raw)
+            (0 until array.length()).mapNotNull { i ->
+                val o = array.optJSONObject(i) ?: return@mapNotNull null
+                Track(o.optString("id"), o.optString("title"), o.optString("artist"), o.optString("album"), o.optLong("durationMs"), o.optString("audioUrl"), o.optString("coverUrl"), o.optString("genre"), o.optString("lyricsLrc"), o.optBoolean("isOnline", false))
+            }.filter { it.id.isNotBlank() && it.audioUrl.isNotBlank() }
+        } catch (_: Exception) { emptyList() }
+    }
+
+    fun saveTracks(context: Context, tracks: List<Track>) {
+        val a = JSONArray()
+        tracks.forEach { t -> a.put(JSONObject().apply { put("id",t.id); put("title",t.title); put("artist",t.artist); put("album",t.album); put("durationMs",t.durationMs); put("audioUrl",t.audioUrl); put("coverUrl",t.coverUrl); put("genre",t.genre); put("lyricsLrc",t.lyricsLrc); put("isOnline",t.isOnline) }) }
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putString(LIBRARY_KEY, a.toString()).apply()
+    }
+
+    private fun embeddedLyrics(context: Context, uri: Uri): String {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return ""
+        val r = MediaMetadataRetriever()
+        return try { r.setDataSource(context, uri); r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_LYRICS)?.trim().orEmpty() }
+        catch (_: Exception) { "" }
+        finally { try { r.release() } catch (_: Exception) { } }
+    }
+
     // No bundled online/demo catalog. The library is populated from the user's device only.
     val STUDIO_TRACKS: List<Track> = emptyList()
 
@@ -57,6 +89,7 @@ object MusicCatalog {
                         AudioCoverArtHelper.getAlbumArtUriForAlbumId(albumId)
                     } else ""
 
+                    val lyrics = embeddedLyrics(context, contentUri)
                     deviceTracks.add(
                         Track(
                             id = "local_$id",
@@ -69,7 +102,7 @@ object MusicCatalog {
                             genre = "Lokal / Perangkat",
                             isOnline = false,
                             moodTags = listOf("Santai", "Fokus Belajar"),
-                            lyricsLrc = "[00:00.00]Pemutaran audio lokal dari penyimpanan perangkat"
+                            lyricsLrc = lyrics
                         )
                     )
                 }
@@ -78,6 +111,8 @@ object MusicCatalog {
             e.printStackTrace()
         }
 
-        return deviceTracks
+        val uniqueTracks = deviceTracks.distinctBy { it.id }
+        saveTracks(context, uniqueTracks)
+        return uniqueTracks
     }
 }
