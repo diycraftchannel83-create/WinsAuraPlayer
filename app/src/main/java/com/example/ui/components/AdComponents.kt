@@ -253,26 +253,40 @@ fun BottomBannerAd(
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
     val adWidth = configuration.screenWidthDp.coerceAtLeast(320)
-    val adView = remember(context, adWidth) {
-        AdView(context).apply {
-            adUnitId = AdMobManager.BANNER_AD_UNIT_ID
-            setAdSize(
-                AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(context, adWidth)
-            )
-            loadAd(AdRequest.Builder().build())
+    var adView by remember(context, adWidth) { mutableStateOf<AdView?>(null) }
+
+    // Wait for the Google Mobile Ads SDK initialization before requesting a banner.
+    LaunchedEffect(context, adWidth) {
+        var attempts = 0
+        while (!AdMobManager.isInitialized && attempts < 100) {
+            delay(100L)
+            attempts++
+        }
+
+        if (AdMobManager.isInitialized && adView == null) {
+            adView = AdView(context).apply {
+                adUnitId = AdMobManager.BANNER_AD_UNIT_ID
+                setAdSize(
+                    AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(context, adWidth)
+                )
+                loadAd(AdRequest.Builder().build())
+            }
         }
     }
 
     DisposableEffect(adView) {
         onDispose {
-            adView.destroy()
+            adView?.destroy()
         }
     }
 
-    AndroidView(
-        factory = { adView },
-        modifier = modifier
-            .fillMaxWidth()
-            .testTag("bottom_banner_ad")
-    )
+    val loadedAdView = adView
+    if (loadedAdView != null) {
+        AndroidView(
+            factory = { loadedAdView },
+            modifier = modifier
+                .fillMaxWidth()
+                .testTag("bottom_banner_ad")
+        )
+    }
 }
