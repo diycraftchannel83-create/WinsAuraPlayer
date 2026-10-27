@@ -171,6 +171,7 @@ class AudioPlayerManager(private val context: Context) {
     }
 
     fun clearStems() {
+        val resumeBaseTrack = _isPlaying.value
         stemPlayers.values.forEach { player ->
             try { player.stop() } catch (_: Exception) { }
             try { player.release() } catch (_: Exception) { }
@@ -180,8 +181,13 @@ class AudioPlayerManager(private val context: Context) {
         stemMode = false
         _isPlaying.value = false
         mediaPlayer?.let { player ->
-            try { player.seekTo(_currentPositionMs.value.toInt()); player.start(); _isPlaying.value = true }
-            catch (_: Exception) { }
+            try {
+                player.seekTo(_currentPositionMs.value.toInt())
+                if (resumeBaseTrack) {
+                    player.start()
+                    _isPlaying.value = true
+                }
+            } catch (_: Exception) { }
         }
     }
 
