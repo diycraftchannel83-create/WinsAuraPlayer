@@ -23,6 +23,7 @@ object AdMobManager {
     // Ad Unit IDs requested by user
     const val APP_OPEN_AD_UNIT_ID = "ca-app-pub-1254774552944426/9151767484"
     const val INTERSTITIAL_AD_UNIT_ID = "ca-app-pub-1254774552944426/5166396802"
+    const val BANNER_AD_UNIT_ID = "ca-app-pub-1254774552944426/1690186225"
 
     private var appOpenAd: AppOpenAd? = null
     private var isAppOpenLoading = false
