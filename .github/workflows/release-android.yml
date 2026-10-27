@@ -42,9 +42,9 @@ jobs:
           fi
           if [ -n "${{ secrets.ANDROID_KEY_PASSWORD }}" ]; then
             echo "KEY_PASSWORD=${{ secrets.ANDROID_KEY_PASSWORD }}" >> "$GITHUB_ENV"
+          fi
           if [ -n "${{ secrets.ANDROID_KEY_ALIAS }}" ]; then
             echo "KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS }}" >> "$GITHUB_ENV"
-          fi
           fi
 
       - name: Build release APK and AAB
