@@ -804,7 +804,28 @@ private fun writeTagsToAudioFile(
     uri: Uri,
     values: Map<String, String>
 ): String {
-    val tempFile = File.createTempFile("wins-aura-tags-", ".audio", context.cacheDir)
+    val displayName = context.contentResolver.query(
+        uri,
+        arrayOf(MediaStore.MediaColumns.DISPLAY_NAME),
+        null,
+        null,
+        null
+    )?.use { cursor ->
+        if (cursor.moveToFirst()) cursor.getString(0) else null
+    }
+    val extension = displayName
+        ?.substringAfterLast('.', "")
+        ?.lowercase()
+        ?.takeIf { it.matches(Regex("[a-z0-9]{1,8}")) }
+        ?: when (context.contentResolver.getType(uri)?.lowercase()) {
+            "audio/mpeg" -> "mp3"
+            "audio/mp4", "video/mp4" -> "m4a"
+            "audio/flac" -> "flac"
+            "audio/ogg" -> "ogg"
+            "audio/wav", "audio/x-wav" -> "wav"
+            else -> "mp3"
+        }
+    val tempFile = File.createTempFile("wins-aura-tags-", ".$extension", context.cacheDir)
     return try {
         val input = context.contentResolver.openInputStream(uri)
             ?: return "Gagal membuka file audio untuk dibaca."
