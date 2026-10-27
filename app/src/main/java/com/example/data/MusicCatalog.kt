@@ -53,9 +53,9 @@ object MusicCatalog {
                 selection,
                 null,
                 "${MediaStore.Audio.Media.TITLE} ASC"
-            )
+            ) ?: throw IllegalStateException("MediaStore tidak mengembalikan hasil pemindaian")
 
-            cursor?.use {
+            cursor.use {
                 val idCol = it.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
                 val titleCol = it.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
                 val artistCol = it.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
@@ -97,7 +97,7 @@ object MusicCatalog {
                 }
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            throw IllegalStateException("Gagal memindai audio pada perangkat", e)
         }
 
         val uniqueTracks = deviceTracks.distinctBy { it.id }
