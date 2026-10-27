@@ -563,16 +563,18 @@ fun NowPlayingScreen(
         // DSP Status Badges
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             if (dspSettings.isBassBoostEnabled) {
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(6.dp))
                         .background(AccentMagenta.copy(alpha = 0.15f))
-                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                        .weight(1f)
+                        .padding(horizontal = 4.dp, vertical = 6.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
                         Icon(
                             imageVector = Icons.Default.Waves,
                             contentDescription = null,
@@ -595,7 +597,8 @@ fun NowPlayingScreen(
                     modifier = Modifier
                         .clip(RoundedCornerShape(6.dp))
                         .background(NeonCyan.copy(alpha = 0.15f))
-                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                        .weight(1f)
+                        .padding(horizontal = 4.dp, vertical = 6.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
@@ -620,13 +623,16 @@ fun NowPlayingScreen(
                     .clip(RoundedCornerShape(6.dp))
                     .background(AccentAmber.copy(alpha = 0.15f))
                     .clickable { onOpenDsp() }
-                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                    .weight(1f)
+                    .padding(horizontal = 4.dp, vertical = 6.dp)
             ) {
                 Text(
                     text = "EQ: ${dspSettings.currentPresetName}",
                     color = AccentAmber,
                     fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
