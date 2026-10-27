@@ -23,7 +23,8 @@ enum class NavigationTab(val title: String) {
     NOW_PLAYING("Pemutar"),
     LIBRARY("Pustaka"),
     DSP_STUDIO("Audio FX"),
-    AI_PLAYLIST("AI Cerdas")
+    AI_PLAYLIST("AI Cerdas"),
+    SETTINGS("Settings")
 }
 
 class MusicViewModel(application: Application) : AndroidViewModel(application) {
@@ -186,6 +187,12 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
 
     fun reportScanPermissionDenied() {
         _scanMessage.value = "Izin akses audio ditolak. Izinkan akses audio di pengaturan aplikasi, lalu coba pindai lagi."
+    }
+
+    fun updateTrackMetadata(updatedTrack: Track) {
+        val updated = _allTracks.value.map { if (it.id == updatedTrack.id) updatedTrack else it }
+        _allTracks.value = updated
+        MusicCatalog.saveTracks(getApplication(), updated)
     }
 
     fun scanDeviceAudio() {
