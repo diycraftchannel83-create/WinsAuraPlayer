@@ -70,6 +70,7 @@ class AudioPlayerManager(private val context: Context) {
     }
 
     fun playTrack(track: Track) {
+        var candidatePlayer: MediaPlayer? = null
         try {
             releasePlayerOnly()
             _currentTrack.value = track
@@ -78,7 +79,7 @@ class AudioPlayerManager(private val context: Context) {
             _currentPositionMs.value = 0L
             _durationMs.value = 0L
 
-            val player = MediaPlayer().apply {
+            val player = MediaPlayer().also { candidatePlayer = it }.apply {
                 setAudioAttributes(
                     AudioAttributes.Builder()
                         .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
@@ -131,6 +132,15 @@ class AudioPlayerManager(private val context: Context) {
             _isBuffering.value = false
             _isPlaying.value = false
             playerPrepared = false
+            // prepareAsync()/setDataSource may fail before the candidate is assigned
+            // to mediaPlayer; release it explicitly to avoid leaking the native player.
+            if (candidatePlayer != null && candidatePlayer !== mediaPlayer) {
+                try {
+                    candidatePlayer?.release()
+                } catch (releaseError: Exception) {
+                    Log.w(TAG, "Error releasing failed candidate player", releaseError)
+                }
+            }
             releasePlayerOnly()
         }
     }
@@ -436,6 +446,7 @@ class AudioPlayerManager(private val context: Context) {
         _isPlaying.value = false
         _isBuffering.value = false
         releaseVisualizer()
+        releaseEffects()
         try {
             mediaPlayer?.stop()
             mediaPlayer?.release()
