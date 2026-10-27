@@ -18,9 +18,6 @@ object Mp3LyricsReader {
     private const val TAG = "Mp3LyricsReader"
     private const val MAX_TAG_SIZE_BYTES = 4 * 1024 * 1024
 
-    internal fun readLyricsFromStreamForTest(bytes: ByteArray): String =
-        ByteArrayInputStream(bytes).use(::readLyricsFromId3Tag)
-
     fun readLyrics(context: Context, audioUri: String): String {
         return try {
             val uri = Uri.parse(audioUri)
