@@ -591,9 +591,9 @@ fun NowPlayingScreen(
                 modifier = Modifier.testTag("screen_repeat_button")
             ) {
                 Icon(
-                    imageVector = if (isRepeat) Icons.Default.RepeatOne else Icons.Default.Repeat,
-                    contentDescription = "Ulangi",
-                    tint = if (isRepeat) NeonCyan else TextTertiary
+                    imageVector = if (repeatMode == RepeatMode.ONE) Icons.Default.RepeatOne else Icons.Default.Repeat,
+                    contentDescription = when (repeatMode) { RepeatMode.OFF -> "Repeat Off"; RepeatMode.ALL -> "Repeat All"; RepeatMode.ONE -> "Repeat One" },
+                    tint = if (repeatMode != RepeatMode.OFF) NeonCyan else TextTertiary
                 )
             }
         }
