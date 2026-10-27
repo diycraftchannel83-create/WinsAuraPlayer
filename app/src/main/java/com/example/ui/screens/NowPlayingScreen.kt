@@ -67,9 +67,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import android.media.MediaMetadataRetriever
-import android.content.ContentValues
+import android.app.Activity
 import android.net.Uri
 import android.provider.MediaStore
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import kotlinx.coroutines.launch
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import org.jaudiotagger.audio.AudioFileIO
+import org.jaudiotagger.tag.FieldKey
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -163,7 +172,30 @@ fun NowPlayingScreen(
     val context = LocalContext.current
     var showTagEditor by remember(track.id) { mutableStateOf(false) }
     var tagStatus by remember(track.id) { mutableStateOf<String?>(null) }
+    var pendingTagSave by remember(track.id) { mutableStateOf<Map<String, String>?>(null) }
+    val tagSaveScope = androidx.compose.runtime.rememberCoroutineScope()
     val editableTags = remember(track.id) { androidx.compose.runtime.mutableStateMapOf<String, String>() }
+
+    fun savePhysicalTags(values: Map<String, String>) {
+        tagStatus = "Menyimpan tag langsung ke file audio…"
+        tagSaveScope.launch {
+            tagStatus = withContext(Dispatchers.IO) {
+                writeTagsToAudioFile(context, Uri.parse(track.audioUrl), values)
+            }
+        }
+    }
+
+    val writePermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        val values = pendingTagSave
+        pendingTagSave = null
+        if (result.resultCode == Activity.RESULT_OK && values != null) {
+            savePhysicalTags(values)
+        } else if (values != null) {
+            tagStatus = "Izin menulis file dibatalkan. Tag fisik belum diubah."
+        }
+    }
     var onlineLyrics by remember(track.id) { mutableStateOf(track.lyricsLrc) }
     var isLoadingLyrics by remember(track.id) { mutableStateOf(false) }
     var lyricsRetryCount by remember(track.id) { mutableStateOf(0) }
@@ -546,16 +578,22 @@ fun NowPlayingScreen(
                 },
                 confirmButton = {
                     TextButton(onClick = {
+                        val values = editableTags.toMap()
+                        val uri = Uri.parse(track.audioUrl)
                         try {
-                            val values = ContentValues().apply {
-                                put(MediaStore.Audio.Media.TITLE, editableTags["Judul"].orEmpty())
-                                put(MediaStore.Audio.Media.ARTIST, editableTags["Artis"].orEmpty())
-                                put(MediaStore.Audio.Media.ALBUM, editableTags["Album"].orEmpty())
+                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R &&
+                                uri.scheme == "content" && uri.authority == "media"
+                            ) {
+                                pendingTagSave = values
+                                val request = MediaStore.createWriteRequest(context.contentResolver, listOf(uri))
+                                writePermissionLauncher.launch(
+                                    IntentSenderRequest.Builder(request.intentSender).build()
+                                )
+                            } else {
+                                savePhysicalTags(values)
                             }
-                            val rows = context.contentResolver.update(Uri.parse(track.audioUrl), values, null, null)
-                            tagStatus = if (rows > 0) "Metadata tersimpan melalui MediaStore." else "Gagal menyimpan; file mungkin hanya-baca."
-                        } catch (_: Exception) {
-                            tagStatus = "Android menolak perubahan tag atau file tidak mendukung penulisan."
+                        } catch (e: Exception) {
+                            tagStatus = "Tidak dapat meminta izin menulis file: ${e.localizedMessage ?: "akses ditolak"}"
                         }
                     }) { Text("Simpan") }
                 },
@@ -759,7 +797,68 @@ fun NowPlayingScreen(
 }
 }
 
+
+/** Writes metadata to the actual audio file bytes, not only to MediaStore's index. */
+private fun writeTagsToAudioFile(
+    context: android.content.Context,
+    uri: Uri,
+    values: Map<String, String>
+): String {
+    val tempFile = File.createTempFile("wins-aura-tags-", ".audio", context.cacheDir)
+    return try {
+        val input = context.contentResolver.openInputStream(uri)
+            ?: return "Gagal membuka file audio untuk dibaca."
+        input.use { source -> FileOutputStream(tempFile).use { target -> source.copyTo(target) } }
+
+        val audioFile = AudioFileIO.read(tempFile)
+        val tag = audioFile.tagOrCreateAndSetDefault
+        val fields = listOf(
+            "Judul" to FieldKey.TITLE,
+            "Artis" to FieldKey.ARTIST,
+            "Album" to FieldKey.ALBUM,
+            "Artis Album" to FieldKey.ALBUM_ARTIST,
+            "Komposer" to FieldKey.COMPOSER,
+            "Penulis" to FieldKey.LYRICIST,
+            "Genre" to FieldKey.GENRE,
+            "Tahun" to FieldKey.YEAR,
+            "Nomor Track" to FieldKey.TRACK,
+            "Nomor Disc" to FieldKey.DISC_NO
+        )
+        var writtenFields = 0
+        fields.forEach { (label, fieldKey) ->
+            val value = values[label]?.trim().orEmpty()
+            if (value.isNotEmpty()) {
+                try {
+                    tag.setField(fieldKey, value)
+                    writtenFields++
+                } catch (_: Exception) {
+                    // Optional fields differ between audio formats.
+                }
+            }
+        }
+        if (writtenFields == 0) return "Format file ini tidak mendukung tag yang dapat ditulis."
+        AudioFileIO.write(audioFile)
+
+        val descriptor = context.contentResolver.openFileDescriptor(uri, "rwt")
+            ?: return "Tag telah diproses, tetapi file asli tidak dapat dibuka untuk ditulis."
+        descriptor.use { pfd ->
+            FileInputStream(tempFile).use { source ->
+                FileOutputStream(pfd.fileDescriptor).use { target ->
+                    source.copyTo(target)
+                    target.flush()
+                }
+            }
+        }
+        "Berhasil menyimpan $writtenFields tag ke file audio fisik."
+    } catch (e: Exception) {
+        "Gagal menyimpan tag ke file fisik: ${e.localizedMessage ?: e.javaClass.simpleName}"
+    } finally {
+        tempFile.delete()
+    }
+}
+
 private fun formatDuration(ms: Long): String {
+
     val totalSec = ms / 1000
     val min = totalSec / 60
     val sec = totalSec % 60
