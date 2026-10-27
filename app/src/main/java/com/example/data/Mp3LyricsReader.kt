@@ -61,16 +61,6 @@ object Mp3LyricsReader {
 
             val frameFlags = ((tag[offset + 8].toInt() and 0xff) shl 8) or
                 (tag[offset + 9].toInt() and 0xff)
-            // ID3v2.4 grouping/compression/encryption require extra decoding and are skipped.
-            if (majorVersion == 4 && (frameFlags and 0x004c) != 0) {
-                val size = readSynchsafeInt(tag, offset + 4)
-                if (size <= 0 || offset + 10 + size > tag.size) break
-                offset += 10 + size
-                continue
-            }
-
-            val frameFlags = ((tag[offset + 8].toInt() and 0xff) shl 8) or
-                (tag[offset + 9].toInt() and 0xff)
             // Skip compressed, encrypted, or grouped frames that need extra payload decoding.
             if (majorVersion == 4 && (frameFlags and 0x004c) != 0) {
                 val size = readSynchsafeInt(tag, offset + 4)
