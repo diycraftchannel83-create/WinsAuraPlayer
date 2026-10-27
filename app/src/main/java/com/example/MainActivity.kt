@@ -254,6 +254,7 @@ fun MainAppContent(
                             onPrevious = { viewModel.playPrevious() },
                             repeatMode = repeatMode,
                             onCycleRepeatMode = { viewModel.cycleRepeatMode() },
+                            onLoadLyrics = { track, callback -> viewModel.getLyricsForTrack(track, callback) },
                             onOpenDsp = { viewModel.setActiveTab(NavigationTab.DSP_STUDIO) },
                             onShowAd = { viewModel.showInterstitialAd() },
                             isDarkMode = isDarkMode,
@@ -322,6 +323,7 @@ fun MainAppContent(
                     onPrevious = { viewModel.playPrevious() },
                     repeatMode = repeatMode,
                     onCycleRepeatMode = { viewModel.cycleRepeatMode() },
+                    onLoadLyrics = { track, callback -> viewModel.getLyricsForTrack(track, callback) },
                     onOpenDsp = {
                         viewModel.setNowPlayingExpanded(false)
                         viewModel.setActiveTab(NavigationTab.DSP_STUDIO)
