@@ -2,7 +2,6 @@ package com.example.audio
 
 import android.content.Context
 import android.media.AudioAttributes
-import android.media.MediaMetadataRetriever
 import android.media.MediaPlayer
 import android.media.audiofx.BassBoost
 import android.media.audiofx.Equalizer
@@ -112,21 +111,6 @@ class AudioPlayerManager(private val context: Context) {
         } catch (e: Exception) {
             Log.e(TAG, "Error playing track", e)
             _isBuffering.value = false
-        }
-    }
-
-    /** Read lyrics embedded in the local audio file's metadata when the decoder exposes them. */
-    fun readEmbeddedLyrics(track: Track): String {
-        if (track.isOnline) return ""
-        val retriever = MediaMetadataRetriever()
-        return try {
-            retriever.setDataSource(context, Uri.parse(track.audioUrl))
-            retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_LYRIC)?.trim().orEmpty()
-        } catch (e: Exception) {
-            Log.w(TAG, "Embedded lyrics unavailable for ${track.audioUrl}", e)
-            ""
-        } finally {
-            try { retriever.release() } catch (_: Exception) { }
         }
     }
 
