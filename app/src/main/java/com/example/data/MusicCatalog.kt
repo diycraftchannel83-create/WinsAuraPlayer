@@ -2,7 +2,6 @@ package com.example.data
 
 import android.content.ContentUris
 import android.content.Context
-import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.provider.MediaStore
 import android.util.Base64
@@ -110,7 +109,7 @@ object MusicCatalog {
                             genre = "Lokal / Perangkat",
                             isOnline = false,
                             moodTags = listOf("Santai", "Fokus Belajar"),
-                            lyricsLrc = readEmbeddedLyrics(context, audioUri)
+                            lyricsLrc = ""
                         )
                     )
                 }
