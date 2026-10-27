@@ -37,6 +37,7 @@ object Mp3LyricsReader {
 
         val majorVersion = header[3].toInt() and 0xff
         if (majorVersion !in 3..4) return ""
+        // ID3v2.2 uses a different six-byte frame layout; this reader handles v2.3/v2.4.
 
         val tagSize = readSynchsafeInt(header, 6)
         if (tagSize <= 0 || tagSize > MAX_TAG_SIZE_BYTES) return ""
@@ -57,6 +58,16 @@ object Mp3LyricsReader {
             val id = String(tag, offset, 4, StandardCharsets.ISO_8859_1)
             if (id.all { it == '\u0000' }) break
             if (!id.all { it in 'A'..'Z' || it in '0'..'9' }) break
+
+            val frameFlags = ((tag[offset + 8].toInt() and 0xff) shl 8) or
+                (tag[offset + 9].toInt() and 0xff)
+            // ID3v2.4 grouping/compression/encryption require extra decoding and are skipped.
+            if (majorVersion == 4 && (frameFlags and 0x004c) != 0) {
+                val size = readSynchsafeInt(tag, offset + 4)
+                if (size <= 0 || offset + 10 + size > tag.size) break
+                offset += 10 + size
+                continue
+            }
 
             val frameSize = if (majorVersion == 4) {
                 readSynchsafeInt(tag, offset + 4)
