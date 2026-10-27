@@ -100,18 +100,14 @@ jobs:
           if (-not (Test-Path $env:KEYSTORE_PATH)) {
             throw "Keystore file not found at KEYSTORE_PATH."
           }
-
-          # A wrong alias makes keytool write to stderr. In Windows PowerShell 5.1,
-          # native stderr can become a terminating PowerShell error when ErrorActionPreference=Stop.
-          # Temporarily use Continue, then inspect keytool's exit code and fall back to discovery.
+          # Temporarily allow keytool stderr; PowerShell 5.1 may otherwise terminate on native stderr.
           $ErrorActionPreference = "Continue"
           $keyAlias = $env:KEY_ALIAS_SECRET
           $aliasValid = $false
           if (-not [string]::IsNullOrWhiteSpace($keyAlias)) {
-            $aliasCheckOutput = & keytool -list -keystore $env:KEYSTORE_PATH -storepass $env:STORE_PASSWORD_SECRET -alias $keyAlias 2>&1
+            $null = & keytool -list -keystore $env:KEYSTORE_PATH -storepass $env:STORE_PASSWORD_SECRET -alias $keyAlias 2>&1
             $aliasValid = ($LASTEXITCODE -eq 0)
           }
-
           if (-not $aliasValid) {
             $details = & keytool -list -v -keystore $env:KEYSTORE_PATH -storepass $env:STORE_PASSWORD_SECRET 2>&1
             $keytoolExitCode = $LASTEXITCODE
@@ -123,133 +119,19 @@ jobs:
             $keyAlias = $null
             foreach ($line in $details) {
               $lineText = [string]$line
-              if ($lineText -match '^Alias name: (.+)      - name: Build release APK and AAB
-        shell: powershell
-        run: |
-          $ErrorActionPreference = "Stop"
-          & gradle --no-daemon clean assembleRelease bundleRelease
-          if ($LASTEXITCODE -ne 0) { throw "Gradle build failed with exit code $LASTEXITCODE" }
-
-      - name: Rename release files
-        shell: powershell
-        run: |
-          $ErrorActionPreference = "Stop"
-          $assets = Join-Path $env:GITHUB_WORKSPACE "release-assets"
-          New-Item -ItemType Directory -Force -Path $assets | Out-Null
-          $apk = Get-ChildItem "app\build\outputs\apk\release" -Filter "*.apk" -File -ErrorAction SilentlyContinue | Select-Object -First 1
-          $aab = Get-ChildItem "app\build\outputs\bundle\release" -Filter "*.aab" -File -ErrorAction SilentlyContinue | Select-Object -First 1
-          if (-not $apk -or -not $aab) {
-            Write-Host "::error::APK or AAB output was not generated."
-            exit 1
-          }
-          Copy-Item $apk.FullName (Join-Path $assets "WinsAuraPlayer-$env:GITHUB_REF_NAME.apk") -Force
-          Copy-Item $aab.FullName (Join-Path $assets "WinsAuraPlayer-$env:GITHUB_REF_NAME.aab") -Force
-          $checksums = Get-ChildItem $assets -File | Where-Object { $_.Extension -in ".apk", ".aab" } | ForEach-Object {
-            $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-            "$hash  $($_.Name)"
-          }
-          $checksums | Set-Content -Path (Join-Path $assets "SHA256SUMS.txt") -Encoding ascii
-          Get-ChildItem $assets | Select-Object Name, Length
-
-      - name: Save build files on this PC
-        shell: powershell
-        run: |
-          $destination = Join-Path $env:USERPROFILE ("WinsAuraPlayer-builds\" + $env:GITHUB_RUN_NUMBER)
-          New-Item -ItemType Directory -Force -Path $destination | Out-Null
-          Copy-Item "release-assets\*" -Destination $destination -Force
-          Write-Host "Build files saved to: $destination"
-          Get-ChildItem $destination | Select-Object Name, Length
-
-      - name: Upload build artifacts (GitHub-hosted only)
-        if: runner.environment == 'github-hosted'
-        uses: actions/upload-artifact@v4
-        with:
-          name: WinsAuraPlayer-${{ github.ref_name }}-APK-AAB
-          path: release-assets/*
-          if-no-files-found: error
-          retention-days: 1
-
-      - name: Publish GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
-        with:
-          name: WinsAuraPlayer ${{ github.ref_name }}
-          tag_name: ${{ github.ref_name }}
-          generate_release_notes: true
-          files: |
-            release-assets/*.apk
-            release-assets/*.aab
-            release-assets/SHA256SUMS.txt
-) { $currentAlias = $Matches[1].Trim() }
-              if ($lineText -match '^Entry type: PrivateKeyEntry      - name: Build release APK and AAB
-        shell: powershell
-        run: |
-          $ErrorActionPreference = "Stop"
-          & gradle --no-daemon clean assembleRelease bundleRelease
-          if ($LASTEXITCODE -ne 0) { throw "Gradle build failed with exit code $LASTEXITCODE" }
-
-      - name: Rename release files
-        shell: powershell
-        run: |
-          $ErrorActionPreference = "Stop"
-          $assets = Join-Path $env:GITHUB_WORKSPACE "release-assets"
-          New-Item -ItemType Directory -Force -Path $assets | Out-Null
-          $apk = Get-ChildItem "app\build\outputs\apk\release" -Filter "*.apk" -File -ErrorAction SilentlyContinue | Select-Object -First 1
-          $aab = Get-ChildItem "app\build\outputs\bundle\release" -Filter "*.aab" -File -ErrorAction SilentlyContinue | Select-Object -First 1
-          if (-not $apk -or -not $aab) {
-            Write-Host "::error::APK or AAB output was not generated."
-            exit 1
-          }
-          Copy-Item $apk.FullName (Join-Path $assets "WinsAuraPlayer-$env:GITHUB_REF_NAME.apk") -Force
-          Copy-Item $aab.FullName (Join-Path $assets "WinsAuraPlayer-$env:GITHUB_REF_NAME.aab") -Force
-          $checksums = Get-ChildItem $assets -File | Where-Object { $_.Extension -in ".apk", ".aab" } | ForEach-Object {
-            $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-            "$hash  $($_.Name)"
-          }
-          $checksums | Set-Content -Path (Join-Path $assets "SHA256SUMS.txt") -Encoding ascii
-          Get-ChildItem $assets | Select-Object Name, Length
-
-      - name: Save build files on this PC
-        shell: powershell
-        run: |
-          $destination = Join-Path $env:USERPROFILE ("WinsAuraPlayer-builds\" + $env:GITHUB_RUN_NUMBER)
-          New-Item -ItemType Directory -Force -Path $destination | Out-Null
-          Copy-Item "release-assets\*" -Destination $destination -Force
-          Write-Host "Build files saved to: $destination"
-          Get-ChildItem $destination | Select-Object Name, Length
-
-      - name: Upload build artifacts (GitHub-hosted only)
-        if: runner.environment == 'github-hosted'
-        uses: actions/upload-artifact@v4
-        with:
-          name: WinsAuraPlayer-${{ github.ref_name }}-APK-AAB
-          path: release-assets/*
-          if-no-files-found: error
-          retention-days: 1
-
-      - name: Publish GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
-        with:
-          name: WinsAuraPlayer ${{ github.ref_name }}
-          tag_name: ${{ github.ref_name }}
-          generate_release_notes: true
-          files: |
-            release-assets/*.apk
-            release-assets/*.aab
-            release-assets/SHA256SUMS.txt
- -and $currentAlias) {
+              if ($lineText -match '^Alias name: (.+)$') {
+                $currentAlias = $Matches[1].Trim()
+              }
+              if ($lineText -match '^Entry type: PrivateKeyEntry$' -and $currentAlias) {
                 $keyAlias = $currentAlias
                 break
               }
             }
           }
-
           if ([string]::IsNullOrWhiteSpace($keyAlias)) {
             Write-Host "::error::Could not find a private-key alias in the keystore. Check ANDROID_KEYSTORE_BASE64 and ANDROID_STORE_PASSWORD."
             exit 1
           }
-
           $ErrorActionPreference = "Stop"
           "STORE_PASSWORD=$env:STORE_PASSWORD_SECRET" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "KEY_PASSWORD=$env:KEY_PASSWORD_SECRET" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
