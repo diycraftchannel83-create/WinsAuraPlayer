@@ -413,7 +413,7 @@ fun DspEqualizerScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(imageVector = Icons.Default.GraphicEq, contentDescription = null, tint = NeonCyan, modifier = Modifier.size(22.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = "Pengaturan Mixer Channel", fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 15.sp)
+                        Text(text = "Mixer Tonal", fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 15.sp)
                     }
                     IconButton(onClick = { onUpdateDspSettings(dspSettings.copy(vocalGainDb = 0, drumGainDb = 2, bassGainDb = 4, instrumentGainDb = 0, effectGainDb = -2)) }, modifier = Modifier.testTag("reset_channel_mixer")) {
                         Icon(Icons.Default.Refresh, contentDescription = "Reset mixer", tint = NeonCyan)
@@ -426,7 +426,7 @@ fun DspEqualizerScreen(
                         Triple("Drum", "🥁", dspSettings.drumGainDb),
                         Triple("Bass", "🎸", dspSettings.bassGainDb),
                         Triple("Instrumen", "🎹", dspSettings.instrumentGainDb),
-                        Triple("Efek", "✨", dspSettings.effectGainDb)
+                        Triple("Treble", "✨", dspSettings.effectGainDb)
                     )
                     channels.forEachIndexed { index, channel ->
                         Column(modifier = Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).background(StudioCard).border(1.dp, DividerColor, RoundedCornerShape(10.dp)).padding(horizontal = 3.dp, vertical = 8.dp).testTag("mixer_channel_$index"), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -449,7 +449,7 @@ fun DspEqualizerScreen(
                     }
                 }
                 Spacer(modifier = Modifier.height(6.dp))
-                Text(text = "Rentang tiap channel: -12 dB sampai +12 dB", color = TextTertiary, fontSize = 10.sp)
+                Text(text = "Kontrol tonal global: bukan pemisahan stem. Vokal, drum, dan instrumen tidak dapat diatur sepenuhnya secara terpisah dari lagu campuran.", color = TextTertiary, fontSize = 10.sp, lineHeight = 14.sp)
             }
         }
         Spacer(modifier = Modifier.height(80.dp)) // padding for bottom bars
