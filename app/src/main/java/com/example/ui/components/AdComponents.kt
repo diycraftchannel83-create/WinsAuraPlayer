@@ -80,141 +80,26 @@ fun AppOpenAdDialog(
     if (!visible) return
 
     val context = LocalContext.current
-    var countdown by remember { mutableIntStateOf(3) }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(visible) {
         val activity = context as? Activity
-        if (activity != null && AdMobManager.isAppOpenAdReady()) {
-            AdMobManager.showAppOpenAd(activity) {
-                onDismiss()
-            }
-        } else {
-            while (countdown > 0) {
-                delay(1000L)
-                countdown--
-            }
+        if (activity == null || activity.isFinishing || activity.isDestroyed) {
+            onDismiss()
+            return@LaunchedEffect
         }
-    }
 
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = false)
-    ) {
-        Card(
-            shape = RoundedCornerShape(22.dp),
-            colors = CardDefaults.cardColors(containerColor = StudioCardElevated),
-            border = androidx.compose.foundation.BorderStroke(
-                1.dp,
-                Brush.linearGradient(listOf(NeonCyan.copy(alpha = 0.6f), ElectricBlue.copy(alpha = 0.3f)))
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(6.dp)
-                .testTag("app_open_ad_dialog")
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(22.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .background(AccentAmber.copy(alpha = 0.2f), RoundedCornerShape(6.dp))
-                            .padding(horizontal = 8.dp, vertical = 3.dp)
-                    ) {
-                        Text(
-                            text = "APP OPEN AD",
-                            color = AccentAmber,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+        if (!AdMobManager.isInitialized) {
+            // Initialize for the next eligible opportunity; never block the user
+            // with a simulated ad screen while the real ad is unavailable.
+            AdMobManager.initialize(activity.applicationContext)
+            onDismiss()
+            return@LaunchedEffect
+        }
 
-                    IconButton(
-                        onClick = onDismiss,
-                        modifier = Modifier
-                            .size(36.dp)
-                            .testTag("close_app_open_ad_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Tutup Iklan",
-                            tint = TextSecondary
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                Box(
-                    modifier = Modifier
-                        .size(68.dp)
-                        .background(
-                            Brush.linearGradient(listOf(NeonCyan.copy(alpha = 0.25f), ElectricBlue.copy(alpha = 0.15f))),
-                            CircleShape
-                        )
-                        .border(1.5.dp, NeonCyan, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Headphones,
-                        contentDescription = null,
-                        tint = NeonCyan,
-                        modifier = Modifier.size(36.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Text(
-                    text = "AuraSound Studio Hi-Fi",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary
-                )
-
-                Text(
-                    text = "Unit ID: ${AdMobManager.APP_OPEN_AD_UNIT_ID}",
-                    fontSize = 10.sp,
-                    color = TextTertiary,
-                    modifier = Modifier.padding(top = 2.dp)
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = "Pemutar audio studio dengan 10-Band EQ, Bass Booster, dan visualizer neon dinamis. Selamat datang di pengalaman musik audiofil terbaik.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                    lineHeight = 18.sp
-                )
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                Button(
-                    onClick = onDismiss,
-                    colors = ButtonDefaults.buttonColors(containerColor = NeonCyan),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp)
-                        .testTag("continue_from_open_ad_button")
-                ) {
-                    Text(
-                        text = if (countdown > 0) "Lanjut ke Musik ($countdown detik)" else "Buka Aplikasi Sekarang",
-                        color = StudioDarkBg,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
-                    )
-                }
-            }
+        // AdMobManager displays a real App Open ad when one is ready. If not,
+        // it requests one for a future opportunity and invokes onDismiss promptly.
+        AdMobManager.showAppOpenAd(activity) {
+            onDismiss()
         }
     }
 }
