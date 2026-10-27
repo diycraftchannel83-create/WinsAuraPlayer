@@ -2,12 +2,6 @@ name: Build and Release WinsAuraPlayer (Windows Runner)
 
 on:
   workflow_dispatch:
-    inputs:
-      publish_release:
-        description: "Publish GitHub Release (use a version tag such as v1.0.1 for release builds)"
-        required: false
-        default: false
-        type: boolean
   push:
     branches:
       - main
@@ -39,7 +33,7 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Configure Android SDK
+      - name: Configure Android SDK (reuse persistent runner installation)
         shell: powershell
         run: |
           $ErrorActionPreference = "Stop"
@@ -57,22 +51,22 @@ jobs:
             Copy-Item (Join-Path $ExtractPath "cmdline-tools\*") -Destination $LatestPath -Recurse -Force
           }
 
-          if (-not (Test-Path $SdkManager)) {
-            throw "Android SDK command-line tools not found: $SdkManager"
-          }
+          if (-not (Test-Path $SdkManager)) { throw "Android SDK command-line tools not found: $SdkManager" }
 
           "ANDROID_HOME=$SdkRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "ANDROID_SDK_ROOT=$SdkRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           (Join-Path $SdkRoot "cmdline-tools\latest\bin") | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
           (Join-Path $SdkRoot "platform-tools") | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
-          $Packages = @(
-            "platform-tools",
-            "platforms;android-36",
-            "build-tools;36.0.0"
-          )
-          & $SdkManager "--sdk_root=$SdkRoot" $Packages
-          if ($LASTEXITCODE -ne 0) { throw "Android SDK package installation failed: $LASTEXITCODE" }
+          $Packages = @("platform-tools", "platforms;android-36", "build-tools;36.0.0")
+          $MissingPackages = @()
+          if (-not (Test-Path (Join-Path $SdkRoot "platform-tools\adb.exe"))) { $MissingPackages += "platform-tools" }
+          if (-not (Test-Path (Join-Path $SdkRoot "platforms\android-36\android.jar"))) { $MissingPackages += "platforms;android-36" }
+          if (-not (Test-Path (Join-Path $SdkRoot "build-tools\36.0.0\aapt.exe"))) { $MissingPackages += "build-tools;36.0.0" }
+          if ($MissingPackages.Count -gt 0) {
+            & $SdkManager "--sdk_root=$SdkRoot" $MissingPackages
+            if ($LASTEXITCODE -ne 0) { throw "Android SDK package installation failed: $LASTEXITCODE" }
+          }
 
           1..100 | ForEach-Object { "y" } | & $SdkManager "--sdk_root=$SdkRoot" --licenses
           if ($LASTEXITCODE -ne 0) { Write-Warning "License acceptance returned a non-zero code; verify SDK licenses on the runner." }
@@ -83,16 +77,9 @@ jobs:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
           $ErrorActionPreference = "Stop"
-          if ([string]::IsNullOrWhiteSpace($env:KEYSTORE_B64)) {
-            throw "Missing repository secret ANDROID_KEYSTORE_BASE64."
-          }
-
+          if ([string]::IsNullOrWhiteSpace($env:KEYSTORE_B64)) { throw "Missing repository secret ANDROID_KEYSTORE_BASE64." }
           $Encoded = $env:KEYSTORE_B64 -replace '\s', ''
-          try {
-            $Bytes = [Convert]::FromBase64String($Encoded)
-          } catch {
-            throw "ANDROID_KEYSTORE_BASE64 is not valid Base64."
-          }
+          try { $Bytes = [Convert]::FromBase64String($Encoded) } catch { throw "ANDROID_KEYSTORE_BASE64 is not valid Base64." }
 
           $KeystorePath = Join-Path $env:GITHUB_WORKSPACE "my-upload-key.jks"
           [System.IO.File]::WriteAllBytes($KeystorePath, $Bytes)
@@ -133,11 +120,8 @@ jobs:
             $KeyAlias = $null
           }
           if ([string]::IsNullOrWhiteSpace($KeyAlias)) {
-            if ($Aliases.Count -eq 1) {
-              $KeyAlias = $Aliases[0]
-            } else {
-              throw "Could not determine a unique private-key alias. Set ANDROID_KEY_ALIAS to one of: $($Aliases -join ', ')"
-            }
+            if ($Aliases.Count -eq 1) { $KeyAlias = $Aliases[0] }
+            else { throw "Could not determine a unique private-key alias. Set ANDROID_KEY_ALIAS to one of: $($Aliases -join ', ')" }
           }
 
           "STORE_PASSWORD=$env:STORE_PASSWORD_SECRET" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
@@ -149,9 +133,23 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = "Stop"
-          # Use the repository Gradle Wrapper so the project controls the Gradle version.
-          if (-not (Test-Path ".\gradlew.bat")) { throw "gradlew.bat is missing from the repository." }
-          & .\gradlew.bat --no-daemon --stacktrace clean assembleRelease bundleRelease
+          # This repository currently contains gradle-wrapper.properties but no gradlew.bat/gradle-wrapper.jar.
+          # Reuse the Gradle 9.3.1 installation/cache on the persistent Windows runner.
+          $Gradle = Get-Command gradle -ErrorAction SilentlyContinue
+          if (-not $Gradle) {
+            $GradlePath = Join-Path $env:USERPROFILE ".gradle\wrapper\dists\gradle-9.3.1-bin"
+            $GradleExe = Get-ChildItem $GradlePath -Filter "gradle.bat" -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($GradleExe) { $GradleCommand = $GradleExe.FullName }
+            else {
+              $GradleZip = Join-Path $env:RUNNER_TEMP "gradle-9.3.1-bin.zip"
+              $GradleHome = Join-Path $env:RUNNER_TEMP "gradle-9.3.1"
+              Invoke-WebRequest -Uri "https://services.gradle.org/distributions/gradle-9.3.1-bin.zip" -OutFile $GradleZip
+              Expand-Archive -LiteralPath $GradleZip -DestinationPath $GradleHome -Force
+              $GradleCommand = Join-Path $GradleHome "gradle-9.3.1\bin\gradle.bat"
+            }
+          } else { $GradleCommand = $Gradle.Source }
+
+          & $GradleCommand --no-daemon --stacktrace clean assembleRelease bundleRelease
           if ($LASTEXITCODE -ne 0) { throw "Gradle build failed with exit code $LASTEXITCODE" }
 
       - name: Collect and verify release files
@@ -170,7 +168,6 @@ jobs:
           $Version = if ($env:GITHUB_REF -like "refs/tags/*") { $env:GITHUB_REF_NAME } else { "build-$env:GITHUB_RUN_NUMBER" }
           Copy-Item $Apk.FullName (Join-Path $Assets "WinsAuraPlayer-$Version.apk") -Force
           Copy-Item $Aab.FullName (Join-Path $Assets "WinsAuraPlayer-$Version.aab") -Force
-
           $Checksums = Get-ChildItem $Assets -File | Where-Object { $_.Extension -in ".apk", ".aab" } | ForEach-Object {
             $Hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
             "$Hash  $($_.Name)"
@@ -199,7 +196,7 @@ jobs:
             release-assets/SHA256SUMS.txt
 
       - name: Save build output locally on Windows runner
-        if: always() && success()
+        if: success()
         shell: powershell
         run: |
           $Source = Join-Path $env:GITHUB_WORKSPACE "release-assets"
