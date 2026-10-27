@@ -74,6 +74,7 @@ import com.example.model.DspSettings
 import com.example.model.LrcParser
 import com.example.model.Track
 import com.example.model.VisualizerMode
+import com.example.viewmodel.RepeatMode
 import com.example.ui.components.AudioCoverImage
 import com.example.ui.components.AudioVisualizerView
 import com.example.ui.components.SynchronizedLyricsView
@@ -109,6 +110,8 @@ fun NowPlayingModal(
     onSeekTo: (Long) -> Unit,
     onNext: () -> Unit,
     onPrevious: () -> Unit,
+    repeatMode: RepeatMode = RepeatMode.OFF,
+    onToggleRepeat: () -> Unit = {},
     onOpenDsp: () -> Unit,
     onDismiss: () -> Unit,
     isDarkMode: Boolean = true,
@@ -119,7 +122,6 @@ fun NowPlayingModal(
 
     var centerMode by remember { mutableStateOf(CenterDisplayMode.ALBUM_ART) }
     var isShuffle by remember { mutableStateOf(false) }
-    var isRepeat by remember { mutableStateOf(false) }
 
     val infiniteTransition = rememberInfiniteTransition(label = "disc_rotation")
     val rotationAngle by infiniteTransition.animateFloat(
@@ -574,13 +576,13 @@ fun NowPlayingModal(
                 }
 
                 IconButton(
-                    onClick = { isRepeat = !isRepeat },
+                    onClick = onToggleRepeat,
                     modifier = Modifier.testTag("repeat_button")
                 ) {
                     Icon(
-                        imageVector = if (isRepeat) Icons.Default.RepeatOne else Icons.Default.Repeat,
-                        contentDescription = "Ulangi",
-                        tint = if (isRepeat) NeonCyan else TextTertiary
+                        imageVector = if (repeatMode == RepeatMode.ONE) Icons.Default.RepeatOne else Icons.Default.Repeat,
+                        contentDescription = when (repeatMode) { RepeatMode.OFF -> "Repeat Off"; RepeatMode.ALL -> "Repeat All"; RepeatMode.ONE -> "Repeat One" },
+                        tint = if (repeatMode != RepeatMode.OFF) NeonCyan else TextTertiary
                     )
                 }
             }
