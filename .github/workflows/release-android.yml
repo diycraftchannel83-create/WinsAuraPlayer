@@ -1,5 +1,4 @@
 name: Build and Publish WinsAuraPlayer
-runs-on: [self-hosted, Windows, X64]
 
 on:
   workflow_dispatch:
