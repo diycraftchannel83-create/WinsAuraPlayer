@@ -40,6 +40,7 @@ import androidx.compose.material.icons.filled.SurroundSound
 import androidx.compose.material.icons.filled.Waves
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -47,6 +48,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -59,12 +61,14 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.data.OnlineLyricsRepository
 import com.example.model.DspSettings
 import com.example.model.LrcParser
 import com.example.model.Track
@@ -84,6 +88,8 @@ import com.example.ui.theme.StudioDarkBg
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 import com.example.ui.theme.TextTertiary
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun NowPlayingScreen(
@@ -146,8 +152,26 @@ fun NowPlayingScreen(
         label = "rotation"
     )
 
-    val parsedLyrics = remember(track.lyricsLrc) {
-        LrcParser.parse(track.lyricsLrc)
+    val context = LocalContext.current
+    var onlineLyrics by remember(track.id) { mutableStateOf(track.lyricsLrc) }
+    var isLoadingLyrics by remember(track.id) { mutableStateOf(false) }
+    var lyricsRetryCount by remember(track.id) { mutableStateOf(0) }
+
+    LaunchedEffect(track.id, lyricsRetryCount) {
+        if (track.lyricsLrc.isNotBlank()) {
+            onlineLyrics = track.lyricsLrc
+            isLoadingLyrics = false
+        } else {
+            isLoadingLyrics = true
+            onlineLyrics = withContext(Dispatchers.IO) {
+                OnlineLyricsRepository.getLyrics(context, track)
+            }
+            isLoadingLyrics = false
+        }
+    }
+
+    val parsedLyrics = remember(onlineLyrics) {
+        LrcParser.parse(onlineLyrics)
     }
 
     Box(
@@ -379,12 +403,48 @@ fun NowPlayingScreen(
                 }
 
                 CenterDisplayMode.LYRICS -> {
-                    SynchronizedLyricsView(
-                        lyrics = parsedLyrics,
-                        currentPositionMs = currentPositionMs,
-                        onSeekToTimestamp = onSeekTo,
-                        modifier = Modifier.fillMaxSize()
-                    )
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        if (isLoadingLyrics) {
+                            Text(
+                                text = "Mencari lirik online…",
+                                color = TextSecondary,
+                                fontSize = 12.sp,
+                                modifier = Modifier.padding(vertical = 8.dp)
+                            )
+                        } else if (parsedLyrics.isEmpty()) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Text(
+                                    text = "Lirik belum ditemukan",
+                                    color = TextSecondary,
+                                    fontSize = 12.sp
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Button(
+                                    onClick = { lyricsRetryCount++ },
+                                    modifier = Modifier.testTag("retry_online_lyrics_button")
+                                ) {
+                                    Text("Cari lagi")
+                                }
+                            }
+                        }
+                        SynchronizedLyricsView(
+                            lyrics = parsedLyrics,
+                            currentPositionMs = currentPositionMs,
+                            onSeekToTimestamp = onSeekTo,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f)
+                        )
+                    }
                 }
             }
         }
