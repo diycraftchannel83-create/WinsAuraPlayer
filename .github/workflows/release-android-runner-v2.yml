@@ -128,6 +128,11 @@ jobs:
           gradle --version
           sdkmanager --list_installed
 
+      - name: Run unit tests before creating a release
+        run: |
+          set -euo pipefail
+          gradle --no-daemon --stacktrace testDebugUnitTest
+
       - name: Build release APK and AAB using the existing key
         run: |
           set -euo pipefail
