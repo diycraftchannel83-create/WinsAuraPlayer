@@ -20,7 +20,7 @@
 
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-1254774552944426~3347511713" />
+            android:value="ca-app-pub-1254774552944426~2292821456" />
 
         <activity
             android:name=".MainActivity"
