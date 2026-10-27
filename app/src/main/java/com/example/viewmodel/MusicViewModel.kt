@@ -9,10 +9,13 @@ import com.example.data.MusicCatalog
 import com.example.model.DspSettings
 import com.example.model.Track
 import com.example.model.VisualizerMode
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import android.util.Log
 
 enum class RepeatMode { OFF, ALL, ONE }
 
@@ -171,12 +174,28 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
         _interstitialAdVisible.value = false
     }
 
+    private val _isScanningMedia = MutableStateFlow(false)
+    val isScanningMedia: StateFlow<Boolean> = _isScanningMedia.asStateFlow()
+
     fun scanDeviceAudio() {
+        if (_isScanningMedia.value) return
         viewModelScope.launch {
-            val localTracks = MusicCatalog.scanLocalDeviceAudio(getApplication())
-            val uniqueTracks = localTracks.distinctBy { it.id }
-            _allTracks.value = uniqueTracks
-            MusicCatalog.saveTracks(getApplication(), uniqueTracks)
+            _isScanningMedia.value = true
+            try {
+                val app = getApplication<Application>()
+                // MediaStore queries and SharedPreferences serialization must not run on the UI thread.
+                val uniqueTracks = withContext(Dispatchers.IO) {
+                    MusicCatalog.scanLocalDeviceAudio(app).distinctBy { it.id }
+                }
+                _allTracks.value = uniqueTracks
+                withContext(Dispatchers.IO) {
+                    MusicCatalog.saveTracks(app, uniqueTracks)
+                }
+            } catch (e: Exception) {
+                Log.e("WinsAuraPlayer", "Media library scan failed", e)
+            } finally {
+                _isScanningMedia.value = false
+            }
         }
     }
 
