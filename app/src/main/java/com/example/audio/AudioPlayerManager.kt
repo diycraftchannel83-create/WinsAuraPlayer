@@ -8,6 +8,7 @@ import android.media.audiofx.BassBoost
 import android.media.audiofx.Equalizer
 import android.media.audiofx.PresetReverb
 import android.media.audiofx.Virtualizer
+import android.media.audiofx.Visualizer
 import android.net.Uri
 import android.util.Log
 import com.example.model.DspSettings
@@ -21,7 +22,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlin.math.sin
+import kotlin.math.abs
+import kotlin.math.sqrt
 
 class AudioPlayerManager(private val context: Context) {
 
@@ -33,6 +35,7 @@ class AudioPlayerManager(private val context: Context) {
     private var bassBoost: BassBoost? = null
     private var virtualizer: Virtualizer? = null
     private var presetReverb: PresetReverb? = null
+    private var visualizer: Visualizer? = null
 
     private val coroutineScope = CoroutineScope(Dispatchers.Main + Job())
     private var progressJob: Job? = null
@@ -91,6 +94,7 @@ class AudioPlayerManager(private val context: Context) {
                     mp.start()
                     _isPlaying.value = true
                     attachAudioEffects(mp.audioSessionId)
+                    attachVisualizer(mp.audioSessionId)
                 }
 
                 setOnCompletionListener {
@@ -243,46 +247,97 @@ class AudioPlayerManager(private val context: Context) {
         }
     }
 
-    private var tick = 0f
     private fun startProgressTracker() {
         progressJob?.cancel()
         progressJob = coroutineScope.launch {
             while (isActive) {
                 if (_isPlaying.value && mediaPlayer != null) {
                     try {
-                        val pos = mediaPlayer?.currentPosition?.toLong() ?: 0L
-                        _currentPositionMs.value = pos
-
-                        // Synthesize 32-band responsive audio visualizer spectrum
-                        tick += 0.25f
-                        val bassBoostFactor = if (currentDspSettings.isBassBoostEnabled) {
-                            1f + (currentDspSettings.bassBoostStrength / 1000f) * 0.5f
-                        } else 1f
-
-                        val newAmps = FloatArray(32) { i ->
-                            val freqPhase = (i * 0.4f) + tick
-                            val baseWave = (sin(freqPhase) + 1f) / 2f // 0..1
-                            val harmonic = (sin(freqPhase * 2.3f) + 1f) / 4f
-                            val pulse = if (i < 8) {
-                                // Bass frequencies reactive to bass booster
-                                ((sin(tick * 1.5f) + 1f) / 2f) * bassBoostFactor * 0.7f
-                            } else {
-                                (sin(freqPhase * 1.7f) + 1f) / 3f
-                            }
-                            val raw = (baseWave * 0.4f + harmonic + pulse).coerceIn(0.08f, 0.98f)
-                            raw
-                        }
-                        _amplitudes.value = newAmps
+                        _currentPositionMs.value = mediaPlayer?.currentPosition?.toLong() ?: 0L
                     } catch (e: Exception) {
-                        // ignore during seek/transient
+                        Log.w(TAG, "Unable to read playback position", e)
                     }
-                } else if (!_isPlaying.value) {
-                    // Decay visualizer smoothly
-                    val decayed = _amplitudes.value.map { (it * 0.85f).coerceAtLeast(0.04f) }.toFloatArray()
-                    _amplitudes.value = decayed
                 }
-                delay(40L) // 25 fps updates
+                delay(40L)
             }
+        }
+    }
+
+    /**
+     * Captures FFT data from this MediaPlayer's audio session. Values are mapped to
+     * 32 logarithmically spaced visualizer bands; no synthetic spectrum is generated.
+     */
+    private fun attachVisualizer(audioSessionId: Int) {
+        releaseVisualizer()
+        try {
+            val captureRange = Visualizer.getCaptureSizeRange()
+            val captureSize = Integer.highestOneBit(captureRange[1]).coerceAtMost(1024)
+                .coerceAtLeast(captureRange[0])
+            visualizer = Visualizer(audioSessionId).apply {
+                this.captureSize = captureSize
+                setDataCaptureListener(
+                    object : Visualizer.OnDataCaptureListener {
+                        override fun onWaveFormDataCapture(
+                            visualizer: Visualizer?,
+                            waveform: ByteArray?,
+                            samplingRate: Int
+                        ) = Unit
+
+                        override fun onFftDataCapture(
+                            visualizer: Visualizer?,
+                            fft: ByteArray?,
+                            samplingRate: Int
+                        ) {
+                            if (fft == null || fft.size < 8 || !_isPlaying.value) return
+                            val bands = FloatArray(32)
+                            val maxBin = (fft.size / 2 - 1).coerceAtLeast(2)
+                            for (i in bands.indices) {
+                                val low = (1.0 * Math.pow(maxBin.toDouble(), i / 32.0)).toInt().coerceIn(1, maxBin)
+                                val high = (1.0 * Math.pow(maxBin.toDouble(), (i + 1) / 32.0)).toInt().coerceIn(low + 1, maxBin + 1)
+                                var energy = 0.0
+                                var count = 0
+                                for (bin in low until high) {
+                                    val offset = bin * 2
+                                    if (offset + 1 >= fft.size) break
+                                    val real = fft[offset].toInt()
+                                    val imaginary = fft[offset + 1].toInt()
+                                    energy += sqrt((real * real + imaginary * imaginary).toDouble())
+                                    count++
+                                }
+                                val magnitude = if (count > 0) energy / count else 0.0
+                                // Compress dynamic range and clamp for stable, readable bars.
+                                bands[i] = (sqrt(magnitude / 128.0) * 1.8).toFloat().coerceIn(0.025f, 1f)
+                            }
+                            val previous = _amplitudes.value
+                            _amplitudes.value = FloatArray(32) { i ->
+                                val attackOrDecay = if (bands[i] > previous[i]) 0.65f else 0.22f
+                                (previous[i] + (bands[i] - previous[i]) * attackOrDecay).coerceIn(0.025f, 1f)
+                            }
+                        }
+                    },
+                    Visualizer.getMaxCaptureRate(),
+                    false,
+                    true
+                )
+                enabled = true
+            }
+            Log.i(TAG, "Audio-session FFT visualizer attached")
+        } catch (e: Exception) {
+            Log.w(TAG, "Audio visualizer unavailable for this session/device", e)
+            releaseVisualizer()
+            _amplitudes.value = FloatArray(32) { 0.025f }
+        }
+    }
+
+    private fun releaseVisualizer() {
+        try {
+            visualizer?.enabled = false
+            visualizer?.setDataCaptureListener(null, 0, false, false)
+            visualizer?.release()
+        } catch (e: Exception) {
+            Log.w(TAG, "Error releasing visualizer", e)
+        } finally {
+            visualizer = null
         }
     }
 
@@ -303,6 +358,7 @@ class AudioPlayerManager(private val context: Context) {
     }
 
     private fun releasePlayerOnly() {
+        releaseVisualizer()
         try {
             mediaPlayer?.stop()
             mediaPlayer?.release()
