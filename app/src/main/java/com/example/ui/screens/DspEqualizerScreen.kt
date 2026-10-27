@@ -68,6 +68,9 @@ import com.example.ui.theme.TextTertiary
 fun DspEqualizerScreen(
     dspSettings: DspSettings,
     onUpdateDspSettings: (DspSettings) -> Unit,
+    stemNames: List<String?> = List(5) { null },
+    onPickStem: (Int) -> Unit = {},
+    onClearStems: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
@@ -419,7 +422,23 @@ fun DspEqualizerScreen(
                         Icon(Icons.Default.Refresh, contentDescription = "Reset mixer", tint = NeonCyan)
                     }
                 }
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = if (stemNames.any { it != null }) "Mode stem aktif: fader mengatur volume stem yang dimuat." else "Pilih file stem terpisah untuk mengatur tiap channel secara independen.",
+                    color = TextSecondary,
+                    fontSize = 10.sp
+                )
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    Text(
+                        text = "Hapus stem",
+                        color = if (stemNames.any { it != null }) NeonCyan else TextTertiary,
+                        fontSize = 11.sp,
+                        modifier = Modifier.clip(RoundedCornerShape(8.dp))
+                            .clickable(enabled = stemNames.any { it != null }) { onClearStems() }
+                            .padding(6.dp).testTag("clear_stems_button")
+                    )
+                }
+                Spacer(modifier = Modifier.height(4.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.Top) {
                     val channels = listOf(
                         Triple("Vokal", "🎙", dspSettings.vocalGainDb),
@@ -430,7 +449,19 @@ fun DspEqualizerScreen(
                     )
                     channels.forEachIndexed { index, channel ->
                         Column(modifier = Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).background(StudioCard).border(1.dp, DividerColor, RoundedCornerShape(10.dp)).padding(horizontal = 3.dp, vertical = 8.dp).testTag("mixer_channel_$index"), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(channel.second, fontSize = 18.sp, maxLines = 1)
+                            Text(
+                                text = channel.second,
+                                fontSize = 18.sp,
+                                maxLines = 1,
+                                modifier = Modifier.clickable { onPickStem(index) }.testTag("pick_stem_$index")
+                            )
+                            Text(
+                                text = if (stemNames.getOrNull(index) != null) "Dimuat" else "Pilih file",
+                                color = if (stemNames.getOrNull(index) != null) NeonCyan else TextTertiary,
+                                fontSize = 8.sp,
+                                maxLines = 1,
+                                modifier = Modifier.clickable { onPickStem(index) }.testTag("stem_status_$index")
+                            )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(channel.first, color = TextPrimary, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
                             Text(text = "${if (channel.third > 0) "+" else ""}${channel.third} dB", color = NeonCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1)
