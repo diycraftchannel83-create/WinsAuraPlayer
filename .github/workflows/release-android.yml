@@ -62,64 +62,105 @@ jobs:
           gradle-version: "9.3.1"
 
       - name: Decode release keystore
-        shell: bash
+        shell: powershell
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
-          if [ -z "$KEYSTORE_B64" ]; then
-            echo "::error::Missing ANDROID_KEYSTORE_BASE64 repository secret."
+          $ErrorActionPreference = "Stop"
+          if ([string]::IsNullOrWhiteSpace($env:KEYSTORE_B64)) {
+            Write-Host "::error::Missing ANDROID_KEYSTORE_BASE64 repository secret."
             exit 1
-          fi
-          printf '%s' "$KEYSTORE_B64" | base64 --decode > "$GITHUB_WORKSPACE/my-upload-key.jks"
-          test -s "$GITHUB_WORKSPACE/my-upload-key.jks"
-          echo "KEYSTORE_PATH=$GITHUB_WORKSPACE/my-upload-key.jks" >> "$GITHUB_ENV"
+          }
+          $encoded = $env:KEYSTORE_B64 -replace '\s', ''
+          try {
+            $bytes = [Convert]::FromBase64String($encoded)
+          } catch {
+            Write-Host "::error::ANDROID_KEYSTORE_BASE64 is not valid Base64."
+            exit 1
+          }
+          $keystorePath = Join-Path $env:GITHUB_WORKSPACE "my-upload-key.jks"
+          [System.IO.File]::WriteAllBytes($keystorePath, $bytes)
+          if (-not (Test-Path $keystorePath) -or (Get-Item $keystorePath).Length -eq 0) {
+            throw "Keystore file was not created or is empty."
+          }
+          "KEYSTORE_PATH=$keystorePath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Configure and validate signing credentials
-        shell: bash
+        shell: powershell
         env:
           STORE_PASSWORD_SECRET: ${{ secrets.ANDROID_STORE_PASSWORD }}
           KEY_PASSWORD_SECRET: ${{ secrets.ANDROID_KEY_PASSWORD }}
           KEY_ALIAS_SECRET: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: |
-          if [ -z "$STORE_PASSWORD_SECRET" ] || [ -z "$KEY_PASSWORD_SECRET" ]; then
-            echo "::error::Missing signing secrets: ANDROID_STORE_PASSWORD and/or ANDROID_KEY_PASSWORD."
+          $ErrorActionPreference = "Stop"
+          if ([string]::IsNullOrWhiteSpace($env:STORE_PASSWORD_SECRET) -or [string]::IsNullOrWhiteSpace($env:KEY_PASSWORD_SECRET)) {
+            Write-Host "::error::Missing signing secrets: ANDROID_STORE_PASSWORD and/or ANDROID_KEY_PASSWORD."
             exit 1
-          fi
+          }
+          if (-not (Test-Path $env:KEYSTORE_PATH)) {
+            throw "Keystore file not found at KEYSTORE_PATH."
+          }
 
-          KEY_ALIAS="$KEY_ALIAS_SECRET"
-          if [ -z "$KEY_ALIAS" ] || ! keytool -list -keystore "$KEYSTORE_PATH" -storepass "$STORE_PASSWORD_SECRET" -alias "$KEY_ALIAS" >/dev/null 2>&1; then
-            KEY_ALIAS="$(keytool -list -v -keystore "$KEYSTORE_PATH" -storepass "$STORE_PASSWORD_SECRET" 2>/dev/null | awk -F': ' '/Alias name:/{alias=$2} /Entry type: PrivateKeyEntry/{print alias; exit}')"
-          fi
+          $keyAlias = $env:KEY_ALIAS_SECRET
+          if (-not [string]::IsNullOrWhiteSpace($keyAlias)) {
+            & keytool -list -keystore $env:KEYSTORE_PATH -storepass $env:STORE_PASSWORD_SECRET -alias $keyAlias 2>$null
+            $aliasValid = ($LASTEXITCODE -eq 0)
+          } else {
+            $aliasValid = $false
+          }
 
-          if [ -z "$KEY_ALIAS" ]; then
-            echo "::error::Could not find a private-key alias in the keystore. Check ANDROID_KEYSTORE_BASE64 and ANDROID_STORE_PASSWORD."
+          if (-not $aliasValid) {
+            $details = & keytool -list -v -keystore $env:KEYSTORE_PATH -storepass $env:STORE_PASSWORD_SECRET 2>$null
+            if ($LASTEXITCODE -ne 0) {
+              Write-Host "::error::Could not open keystore. Check ANDROID_KEYSTORE_BASE64 and ANDROID_STORE_PASSWORD."
+              exit 1
+            }
+            $currentAlias = $null
+            foreach ($line in $details) {
+              if ($line -match '^Alias name: (.+)$') { $currentAlias = $Matches[1].Trim() }
+              if ($line -match '^Entry type: PrivateKeyEntry$' -and $currentAlias) {
+                $keyAlias = $currentAlias
+                break
+              }
+            }
+          }
+
+          if ([string]::IsNullOrWhiteSpace($keyAlias)) {
+            Write-Host "::error::Could not find a private-key alias in the keystore. Check ANDROID_KEYSTORE_BASE64 and ANDROID_STORE_PASSWORD."
             exit 1
-          fi
+          }
 
-          {
-            echo "STORE_PASSWORD=$STORE_PASSWORD_SECRET"
-            echo "KEY_PASSWORD=$KEY_PASSWORD_SECRET"
-            echo "KEY_ALIAS=$KEY_ALIAS"
-          } >> "$GITHUB_ENV"
+          "STORE_PASSWORD=$env:STORE_PASSWORD_SECRET" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "KEY_PASSWORD=$env:KEY_PASSWORD_SECRET" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "KEY_ALIAS=$keyAlias" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Build release APK and AAB
-        shell: bash
-        run: gradle --no-daemon clean assembleRelease bundleRelease
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+          & gradle --no-daemon clean assembleRelease bundleRelease
+          if ($LASTEXITCODE -ne 0) { throw "Gradle build failed with exit code $LASTEXITCODE" }
 
       - name: Rename release files
-        shell: bash
+        shell: powershell
         run: |
-          mkdir -p release-assets
-          APK_PATH="$(find app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' -print -quit)"
-          AAB_PATH="$(find app/build/outputs/bundle/release -maxdepth 1 -type f -name '*.aab' -print -quit)"
-          if [ -z "$APK_PATH" ] || [ -z "$AAB_PATH" ]; then
-            echo "::error::APK or AAB output was not generated."
+          $ErrorActionPreference = "Stop"
+          $assets = Join-Path $env:GITHUB_WORKSPACE "release-assets"
+          New-Item -ItemType Directory -Force -Path $assets | Out-Null
+          $apk = Get-ChildItem "app\build\outputs\apk\release" -Filter "*.apk" -File -ErrorAction SilentlyContinue | Select-Object -First 1
+          $aab = Get-ChildItem "app\build\outputs\bundle\release" -Filter "*.aab" -File -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $apk -or -not $aab) {
+            Write-Host "::error::APK or AAB output was not generated."
             exit 1
-          fi
-          cp "$APK_PATH" "release-assets/WinsAuraPlayer-${GITHUB_REF_NAME}.apk"
-          cp "$AAB_PATH" "release-assets/WinsAuraPlayer-${GITHUB_REF_NAME}.aab"
-          (cd release-assets && sha256sum *.apk *.aab > SHA256SUMS.txt)
-          ls -lah release-assets
+          }
+          Copy-Item $apk.FullName (Join-Path $assets "WinsAuraPlayer-$env:GITHUB_REF_NAME.apk") -Force
+          Copy-Item $aab.FullName (Join-Path $assets "WinsAuraPlayer-$env:GITHUB_REF_NAME.aab") -Force
+          $checksums = Get-ChildItem $assets -File | Where-Object { $_.Extension -in ".apk", ".aab" } | ForEach-Object {
+            $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $($_.Name)"
+          }
+          $checksums | Set-Content -Path (Join-Path $assets "SHA256SUMS.txt") -Encoding ascii
+          Get-ChildItem $assets | Select-Object Name, Length
 
       - name: Save build files on this PC
         shell: powershell
