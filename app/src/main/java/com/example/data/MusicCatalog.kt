@@ -109,7 +109,7 @@ object MusicCatalog {
                             genre = "Lokal / Perangkat",
                             isOnline = false,
                             moodTags = listOf("Santai", "Fokus Belajar"),
-                            lyricsLrc = readEmbeddedLyrics(context, audioUri)
+                            lyricsLrc = ""
                         )
                     )
                 }
