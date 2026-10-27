@@ -1,7 +1,6 @@
 package com.example.data
 
 import org.junit.Assert.assertEquals
-import java.io.ByteArrayInputStream
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.ByteArrayInputStream
@@ -30,7 +29,7 @@ class Mp3LyricsReaderTest {
         val tag = "ID3".toByteArray(StandardCharsets.ISO_8859_1) +
             byteArrayOf(3, 0, 0) + synchsafe(frame.size) + frame
 
-        assertTrue(Mp3LyricsReader.readLyricsFromStreamForTest(tag).isEmpty())
+        assertTrue(Mp3LyricsReader.readLyricsFromId3Tag(ByteArrayInputStream(tag)).isEmpty())
     }
 
     private fun frameHeader(id: String, size: Int): ByteArray =
