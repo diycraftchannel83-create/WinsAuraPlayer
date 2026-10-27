@@ -50,7 +50,6 @@ jobs:
             New-Item -ItemType Directory -Force -Path $LatestPath | Out-Null
             Copy-Item (Join-Path $ExtractPath "cmdline-tools\*") -Destination $LatestPath -Recurse -Force
           }
-
           if (-not (Test-Path $SdkManager)) { throw "Android SDK command-line tools not found: $SdkManager" }
 
           "ANDROID_HOME=$SdkRoot" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
@@ -67,7 +66,6 @@ jobs:
             & $SdkManager "--sdk_root=$SdkRoot" $MissingPackages
             if ($LASTEXITCODE -ne 0) { throw "Android SDK package installation failed: $LASTEXITCODE" }
           }
-
           1..100 | ForEach-Object { "y" } | & $SdkManager "--sdk_root=$SdkRoot" --licenses
           if ($LASTEXITCODE -ne 0) { Write-Warning "License acceptance returned a non-zero code; verify SDK licenses on the runner." }
 
@@ -80,7 +78,6 @@ jobs:
           if ([string]::IsNullOrWhiteSpace($env:KEYSTORE_B64)) { throw "Missing repository secret ANDROID_KEYSTORE_BASE64." }
           $Encoded = $env:KEYSTORE_B64 -replace '\s', ''
           try { $Bytes = [Convert]::FromBase64String($Encoded) } catch { throw "ANDROID_KEYSTORE_BASE64 is not valid Base64." }
-
           $KeystorePath = Join-Path $env:GITHUB_WORKSPACE "my-upload-key.jks"
           [System.IO.File]::WriteAllBytes($KeystorePath, $Bytes)
           if ((Get-Item $KeystorePath).Length -eq 0) { throw "Keystore file is empty." }
@@ -113,7 +110,6 @@ jobs:
               $CurrentAlias = $null
             }
           }
-
           $KeyAlias = $env:KEY_ALIAS_SECRET
           if (-not [string]::IsNullOrWhiteSpace($KeyAlias) -and $Aliases -notcontains $KeyAlias) {
             Write-Warning "ANDROID_KEY_ALIAS did not match a private-key alias in the keystore; attempting automatic detection."
@@ -123,33 +119,23 @@ jobs:
             if ($Aliases.Count -eq 1) { $KeyAlias = $Aliases[0] }
             else { throw "Could not determine a unique private-key alias. Set ANDROID_KEY_ALIAS to one of: $($Aliases -join ', ')" }
           }
-
           "STORE_PASSWORD=$env:STORE_PASSWORD_SECRET" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "KEY_PASSWORD=$env:KEY_PASSWORD_SECRET" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           "KEY_ALIAS=$KeyAlias" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           Write-Host "Signing alias validated."
 
+      - name: Set up cached Gradle distribution
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.3.1"
+          cache-disabled: false
+
       - name: Build release APK and AAB
         shell: powershell
         run: |
           $ErrorActionPreference = "Stop"
-          # This repository currently contains gradle-wrapper.properties but no gradlew.bat/gradle-wrapper.jar.
-          # Reuse the Gradle 9.3.1 installation/cache on the persistent Windows runner.
-          $Gradle = Get-Command gradle -ErrorAction SilentlyContinue
-          if (-not $Gradle) {
-            $GradlePath = Join-Path $env:USERPROFILE ".gradle\wrapper\dists\gradle-9.3.1-bin"
-            $GradleExe = Get-ChildItem $GradlePath -Filter "gradle.bat" -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1
-            if ($GradleExe) { $GradleCommand = $GradleExe.FullName }
-            else {
-              $GradleZip = Join-Path $env:RUNNER_TEMP "gradle-9.3.1-bin.zip"
-              $GradleHome = Join-Path $env:RUNNER_TEMP "gradle-9.3.1"
-              Invoke-WebRequest -Uri "https://services.gradle.org/distributions/gradle-9.3.1-bin.zip" -OutFile $GradleZip
-              Expand-Archive -LiteralPath $GradleZip -DestinationPath $GradleHome -Force
-              $GradleCommand = Join-Path $GradleHome "gradle-9.3.1\bin\gradle.bat"
-            }
-          } else { $GradleCommand = $Gradle.Source }
-
-          & $GradleCommand --no-daemon --stacktrace clean assembleRelease bundleRelease
+          # Keep Gradle 9.3.1 pinned to match gradle/wrapper/gradle-wrapper.properties.
+          & gradle --no-daemon --stacktrace clean assembleRelease bundleRelease
           if ($LASTEXITCODE -ne 0) { throw "Gradle build failed with exit code $LASTEXITCODE" }
 
       - name: Collect and verify release files
@@ -159,7 +145,6 @@ jobs:
           $Assets = Join-Path $env:GITHUB_WORKSPACE "release-assets"
           if (Test-Path $Assets) { Remove-Item $Assets -Recurse -Force }
           New-Item -ItemType Directory -Force -Path $Assets | Out-Null
-
           $Apk = Get-ChildItem "app\build\outputs\apk\release" -Filter "*.apk" -File -ErrorAction SilentlyContinue | Select-Object -First 1
           $Aab = Get-ChildItem "app\build\outputs\bundle\release" -Filter "*.aab" -File -ErrorAction SilentlyContinue | Select-Object -First 1
           if (-not $Apk) { throw "Release APK was not generated in app\build\outputs\apk\release." }
