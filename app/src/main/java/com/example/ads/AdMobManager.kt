@@ -31,26 +31,41 @@ object AdMobManager {
     private var interstitialAd: InterstitialAd? = null
     private var isInterstitialLoading = false
 
+    @Volatile
     var isInitialized = false
         private set
 
+    @Volatile
+    private var isInitializing = false
+
+    private val initializationLock = Any()
     private val mainHandler = Handler(Looper.getMainLooper())
 
     fun initialize(context: Context) {
-        if (isInitialized) return
+        synchronized(initializationLock) {
+            if (isInitialized || isInitializing) return
+            isInitializing = true
+        }
 
-        // Initialize on background thread to prevent blocking main thread / WebView delays
+        val appContext = context.applicationContext
+        // Initialize on background thread to prevent blocking main thread / WebView delays.
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                MobileAds.initialize(context) { status ->
-                    isInitialized = true
+                MobileAds.initialize(appContext) { status ->
+                    synchronized(initializationLock) {
+                        isInitialized = true
+                        isInitializing = false
+                    }
                     Log.d(TAG, "AdMob Initialized: $status")
                     mainHandler.post {
-                        loadAppOpenAd(context)
-                        loadInterstitialAd(context)
+                        loadAppOpenAd(appContext)
+                        loadInterstitialAd(appContext)
                     }
                 }
             } catch (e: Exception) {
+                synchronized(initializationLock) {
+                    isInitializing = false
+                }
                 Log.e(TAG, "Error initializing MobileAds on background thread", e)
             }
         }
