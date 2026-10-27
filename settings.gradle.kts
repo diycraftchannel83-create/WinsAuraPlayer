@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "AuraSound DSP"
+rootProject.name = "WinsAuraPlayer"
 
 include(":app")
