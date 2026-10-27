@@ -1,0 +1,1 @@
+This branch is prepared for the initial WinsAuraPlayer v1.0.0 release. Publish the tag `v1.0.0` after repository Actions secrets are configured to build and attach APK/AAB to GitHub Releases.
