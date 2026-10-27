@@ -26,14 +26,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -53,12 +49,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.example.model.Track
-import com.example.ui.theme.AccentAmber
+import com.example.ui.components.TrackItemRow
 import com.example.ui.theme.DividerColor
-import com.example.ui.theme.ElectricBlue
 import com.example.ui.theme.NeonCyan
 import com.example.ui.theme.StudioCard
-import com.example.ui.theme.StudioCardElevated
 import com.example.ui.theme.StudioDarkBg
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
@@ -75,7 +69,7 @@ fun LibraryScreen(
 ) {
     val context = LocalContext.current
     var searchQuery by remember { mutableStateOf("") }
-    var selectedFilter by remember { mutableStateOf("Semua") } // "Semua", "Wins", "Lokal"
+    var selectedFilter by remember { mutableStateOf("Semua") } // "Semua", "Perangkat"
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -90,8 +84,7 @@ fun LibraryScreen(
                 track.artist.contains(searchQuery, ignoreCase = true) ||
                 track.album.contains(searchQuery, ignoreCase = true)
         val matchesCategory = when (selectedFilter) {
-            "Wins" -> track.isWinsTrack
-            "Lokal" -> !track.isOnline
+            "Perangkat" -> !track.isOnline
             else -> true
         }
         matchesQuery && matchesCategory
@@ -120,7 +113,7 @@ fun LibraryScreen(
                             color = TextPrimary
                         )
                         Text(
-                            text = "${filteredTracks.size} lagu tersedia di pemutar",
+                            text = "${filteredTracks.size} lagu siap diputar",
                             style = MaterialTheme.typography.bodySmall,
                             color = TextSecondary
                         )
@@ -166,7 +159,7 @@ fun LibraryScreen(
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    placeholder = { Text("Cari lagu, album, artis wins...", color = TextTertiary) },
+                    placeholder = { Text("Cari judul lagu, album, artis...", color = TextTertiary) },
                     leadingIcon = {
                         Icon(
                             imageVector = Icons.Default.Search,
@@ -191,10 +184,11 @@ fun LibraryScreen(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Filter chips: Semua, Wins, Offline
+                // Filter chips: Semua, Perangkat Lokal
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("Semua", "Wins", "Lokal").forEach { tab ->
+                    listOf("Semua", "Perangkat").forEach { tab ->
                         val isSelected = selectedFilter == tab
+                        val label = if (tab == "Semua") "Semua Lagu" else "Penyimpanan Perangkat"
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(10.dp))
@@ -209,7 +203,7 @@ fun LibraryScreen(
                                 .testTag("filter_$tab")
                         ) {
                             Text(
-                                text = tab,
+                                text = label,
                                 color = if (isSelected) NeonCyan else TextSecondary,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                 fontSize = 13.sp
@@ -239,7 +233,7 @@ fun LibraryScreen(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "Tidak ada lagu yang cocok",
+                            text = "Tidak ada lagu yang ditemukan",
                             color = TextSecondary,
                             fontWeight = FontWeight.SemiBold
                         )

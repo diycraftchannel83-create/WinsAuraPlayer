@@ -10,8 +10,7 @@ data class Track(
     val coverUrl: String,
     val genre: String,
     val lyricsLrc: String = "",
-    val isOnline: Boolean = true,
-    val isWinsTrack: Boolean = false,
+    val isOnline: Boolean = false,
     val moodTags: List<String> = emptyList()
 ) {
     fun formattedDuration(): String {

@@ -3,6 +3,7 @@ package com.example.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.ads.AdMobManager
 import com.example.audio.AudioPlayerManager
 import com.example.data.MusicCatalog
 import com.example.model.DspSettings
@@ -14,9 +15,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 enum class NavigationTab(val title: String) {
+    NOW_PLAYING("Pemutar"),
     LIBRARY("Pustaka"),
-    WINS_ONLINE("Wins & Daring"),
-    DSP_STUDIO("DSP & EQ"),
+    DSP_STUDIO("Audio FX"),
     AI_PLAYLIST("AI Cerdas")
 }
 
@@ -27,14 +28,18 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     private val _allTracks = MutableStateFlow<List<Track>>(MusicCatalog.getAllInitialTracks())
     val allTracks: StateFlow<List<Track>> = _allTracks.asStateFlow()
 
-    private val _activeTab = MutableStateFlow(NavigationTab.WINS_ONLINE)
+    private val _activeTab = MutableStateFlow(NavigationTab.NOW_PLAYING)
     val activeTab: StateFlow<NavigationTab> = _activeTab.asStateFlow()
 
     private val _isNowPlayingExpanded = MutableStateFlow(false)
     val isNowPlayingExpanded: StateFlow<Boolean> = _isNowPlayingExpanded.asStateFlow()
 
-    private val _welcomeAdVisible = MutableStateFlow(true)
-    val welcomeAdVisible: StateFlow<Boolean> = _welcomeAdVisible.asStateFlow()
+    // Ads state
+    private val _appOpenAdVisible = MutableStateFlow(true)
+    val appOpenAdVisible: StateFlow<Boolean> = _appOpenAdVisible.asStateFlow()
+
+    private val _interstitialAdVisible = MutableStateFlow(false)
+    val interstitialAdVisible: StateFlow<Boolean> = _interstitialAdVisible.asStateFlow()
 
     private val _dspSettings = MutableStateFlow(DspSettings())
     val dspSettings: StateFlow<DspSettings> = _dspSettings.asStateFlow()
@@ -49,11 +54,16 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     val durationMs = playerManager.durationMs
     val amplitudes = playerManager.amplitudes
 
+    private var songChangeCount = 0
+
     init {
-        // Automatically queue the first track from artist wins
-        val initialWins = MusicCatalog.WINS_TRACKS.firstOrNull()
-        if (initialWins != null) {
-            // Pre-select track without auto-starting sound until user taps or presses play
+        // Initialize AdMob SDK
+        AdMobManager.initialize(application)
+
+        // Pre-select first track for immediate playback readiness
+        val firstTrack = MusicCatalog.STUDIO_TRACKS.firstOrNull()
+        if (firstTrack != null) {
+            // We can prepare track without loud auto-start
         }
 
         playerManager.onTrackCompleted = {
@@ -63,6 +73,10 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
 
     fun playTrack(track: Track) {
         playerManager.playTrack(track)
+        songChangeCount++
+        if (songChangeCount % 5 == 0) {
+            _interstitialAdVisible.value = true
+        }
     }
 
     fun togglePlayPause() {
@@ -128,8 +142,16 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
         _isNowPlayingExpanded.value = expanded
     }
 
-    fun dismissWelcomeAd() {
-        _welcomeAdVisible.value = false
+    fun dismissAppOpenAd() {
+        _appOpenAdVisible.value = false
+    }
+
+    fun showInterstitialAd() {
+        _interstitialAdVisible.value = true
+    }
+
+    fun dismissInterstitialAd() {
+        _interstitialAdVisible.value = false
     }
 
     fun scanDeviceAudio() {

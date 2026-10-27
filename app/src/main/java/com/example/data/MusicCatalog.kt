@@ -7,216 +7,145 @@ import android.provider.MediaStore
 import com.example.model.Track
 
 object MusicCatalog {
-    val WINS_TRACKS = listOf(
+    val STUDIO_TRACKS = listOf(
         Track(
-            id = "wins_chill_01",
-            title = "chill",
-            artist = "wins",
-            album = "chill (2023)",
-            durationMs = 142000,
-            audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-            coverUrl = "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500&q=80",
-            genre = "Lo-Fi / Hip-Hop",
-            isOnline = true,
-            isWinsTrack = true,
-            moodTags = listOf("Santai", "Malam Hari", "Fokus Belajar", "Melankolis"),
-            lyricsLrc = """
-                [00:02.00]Late night in the lab, beats rolling steady
-                [00:07.50]Tape hiss in the background, minds already heavy
-                [00:13.20]Nebraska to the coast, keeping the soul light
-                [00:18.80]Bass frequency hums through the quiet night
-                [00:24.40]Lost in the sound, we don't count the miles
-                [00:30.00]Just pure lo-fi warmth turning into smiles
-                [00:36.10]Spin the vinyl backward, let the rhythm breathe
-                [00:42.50]Underground cadence that you can believe
-                [00:48.20]Chill out now, let the frequencies align
-                [00:54.00]Bass booster booming in standard design
-                [01:00.00]Dolby surround wrapping round the room
-                [01:06.50]Wins on the track clearing all the gloom
-                [01:12.80]Yeah, keeping it chill, forever real
-            """.trimIndent()
-        ),
-        Track(
-            id = "wins_whoa_02",
-            title = "whoa",
-            artist = "wins",
-            album = "whoa - Single (2026)",
-            durationMs = 158000,
-            audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
-            coverUrl = "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=500&q=80",
-            genre = "Underground Hip-Hop",
-            isOnline = true,
-            isWinsTrack = true,
-            moodTags = listOf("Energi & Workout", "Cyberpunk Drive", "Fokus Belajar"),
-            lyricsLrc = """
-                [00:03.00]Whoa, step into the frame, feel the voltage rise
-                [00:09.10]Speakers clipping softly underneath the neon skies
-                [00:15.00]Grind never pauses when the beat starts to hit
-                [00:21.00]Heavy kick, snappy snare, every bar legit
-                [00:27.20]Sub-bass rumbling down the boulevard
-                [00:33.00]Wins with the flow pulling every wildcard
-                [00:39.10]Hold on, let the equalizer do the talking
-                [00:45.30]Headphones on, into greatness we are walking
-                [00:52.00]Whoa, feel the 3D spatial sound expansion
-                [00:58.50]Turn the dial up, audio satisfaction
-            """.trimIndent()
-        ),
-        Track(
-            id = "wins_step_03",
-            title = "step",
-            artist = "wins",
-            album = "b.tape (2026)",
-            durationMs = 135000,
-            audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
-            coverUrl = "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=500&q=80",
-            genre = "Alternative Hip-Hop",
-            isOnline = true,
-            isWinsTrack = true,
-            moodTags = listOf("Energi & Workout", "Santai", "Cyberpunk Drive"),
-            lyricsLrc = """
-                [00:01.50]One step, two step, lock the groove in place
-                [00:06.00]Watch the spectrum visualizer dancing in the space
-                [00:12.00]Raw analog texture cut right from the cassette
-                [00:18.00]Golden age nostalgia that nobody can forget
-                [00:24.00]Step back, step up, drop the 10-band tone
-                [00:30.00]Crisp high frequencies singing on their own
-                [00:36.50]Wins delivering the heat across the state line
-                [00:43.00]Timeless energy, handcrafted and divine
-            """.trimIndent()
-        ),
-        Track(
-            id = "wins_gotham_04",
-            title = "gotham",
-            artist = "wins",
-            album = "gotham (2025)",
-            durationMs = 170000,
-            audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3",
-            coverUrl = "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=500&q=80",
-            genre = "Dark Lo-Fi / Rap",
-            isOnline = true,
-            isWinsTrack = true,
-            moodTags = listOf("Malam Hari", "Melankolis", "Cyberpunk Drive"),
-            lyricsLrc = """
-                [00:04.00]Shadows in the skyline, city lights glow dim
-                [00:10.00]Gotham nocturnal vibes filled up to the brim
-                [00:16.00]Synthesizer echoes bouncing off the concrete wall
-                [00:22.00]Echoes of the reverb answering the call
-                [00:28.00]Keep the volume maxed, let the bassline take control
-                [00:34.00]Sonic therapy healing every broken soul
-                [00:41.00]Late night chronicles, wins on the beat
-                [00:48.00]Smooth midnight drive down an empty street
-            """.trimIndent()
-        ),
-        Track(
-            id = "wins_lovewins_05",
-            title = "Love, wins",
-            artist = "wins",
-            album = "Love, wins (2025)",
-            durationMs = 164000,
-            audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3",
-            coverUrl = "https://images.unsplash.com/photo-1487180144351-b8472da7d491?w=500&q=80",
-            genre = "Soulful Lo-Fi",
-            isOnline = true,
-            isWinsTrack = true,
-            moodTags = listOf("Santai", "Melankolis", "Fokus Belajar"),
-            lyricsLrc = """
-                [00:02.00]Warm rhodes piano floating in the air
-                [00:07.50]Melodies that tell you that somebody's there
-                [00:13.00]Heartfelt cadence over vinyl crackle tone
-                [00:19.00]Never truly walking in this world alone
-                [00:25.00]Love always wins when the sound waves unite
-                [00:31.00]Turning pitch black darkness into morning light
-                [00:37.00]Harmonies surrounding with acoustic grace
-                [00:44.00]Finding serenity in this digital space
-            """.trimIndent()
-        ),
-        Track(
-            id = "wins_price_06",
-            title = "price",
-            artist = "wins",
-            album = "price (2023)",
-            durationMs = 150000,
-            audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3",
-            coverUrl = "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=500&q=80",
-            genre = "Underground Rap",
-            isOnline = true,
-            isWinsTrack = true,
-            moodTags = listOf("Fokus Belajar", "Energi & Workout", "Malam Hari"),
-            lyricsLrc = """
-                [00:03.00]Count the dedication, calculate the cost
-                [00:09.00]Lessons turned to wisdom, nothing ever lost
-                [00:15.00]Raw drum chops echoing right and left
-                [00:21.00]True underground music in its purest depth
-                [00:27.00]Price of the passion, sweat on the console
-                [00:33.00]Bass booster punch vibrating the whole soul
-                [00:40.00]Steady flow, steady rhythm, never fall behind
-                [00:46.00]Mastered perfection inside of your mind
-            """.trimIndent()
-        )
-    )
-
-    val ONLINE_STATION_TRACKS = listOf(
-        Track(
-            id = "online_cyber_01",
-            title = "Neon Overdrive 2099",
-            artist = "Aura Synthetics",
+            id = "studio_neon_01",
+            title = "Midnight Cyberwave",
+            artist = "Aura Sound Lab",
             album = "Cyber Horizon",
             durationMs = 184000,
-            audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3",
-            coverUrl = "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=500&q=80",
-            genre = "Synthwave / Cyberpunk",
-            isOnline = true,
-            isWinsTrack = false,
+            audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+            coverUrl = "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=600&q=80",
+            genre = "Synthwave / Electronic",
+            isOnline = false,
             moodTags = listOf("Cyberpunk Drive", "Energi & Workout"),
             lyricsLrc = """
-                [00:03.00]Grid lines expanding into infinity
-                [00:08.50]Speeding on the highway through the cyber city
-                [00:14.00]Analog arpeggiator powering the drive
-                [00:20.00]Neon pulses keeping digital dream alive
+                [00:02.00]Neon lights reflection on the wet asphalt
+                [00:07.50]Racing through the city where time has no fault
+                [00:13.20]Synthesizer pulse cutting through the silent air
+                [00:18.80]Echoing the rhythm with electric flair
+                [00:24.40]Sub-frequencies hum deep in the machine
+                [00:30.00]Brightest soundwaves that you've ever seen
+                [00:36.10]Accelerating forward, break through the sound barrier
+                [00:42.50]Dolby 3D spatial sound expanding everywhere
+                [00:48.20]Feel the neon wave, let the equalizer glow
+                [00:54.00]Deep bass booster keeping up the flow
             """.trimIndent()
         ),
         Track(
-            id = "online_chill_02",
-            title = "Midnight Coffee Drift",
-            artist = "Tokyo Lo-Fi Lab",
-            album = "Rainy Shibuya",
-            durationMs = 175000,
-            audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3",
-            coverUrl = "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=500&q=80",
-            genre = "Lo-Fi Beats",
-            isOnline = true,
-            isWinsTrack = false,
-            moodTags = listOf("Santai", "Malam Hari", "Fokus Belajar"),
+            id = "studio_chill_02",
+            title = "Rainy Coffee Sanctuary",
+            artist = "Echo & Velvet",
+            album = "Lo-Fi Essentials",
+            durationMs = 162000,
+            audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
+            coverUrl = "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=600&q=80",
+            genre = "Lo-Fi / Mellow",
+            isOnline = false,
+            moodTags = listOf("Santai", "Fokus Belajar", "Malam Hari"),
             lyricsLrc = """
-                [00:02.00]Raindrops tapping softly on the window pane
-                [00:07.00]Steam from hot coffee washing out the strain
-                [00:13.00]Gentle guitar loop swinging slow and sweet
-                [00:19.00]Cozy vibes settling right into the beat
+                [00:02.00]Warm cup in hand, watching rain pour down
+                [00:07.00]Gentle rhodes keys dancing around the town
+                [00:13.00]Analog warmth drifting like autumn leaves
+                [00:19.00]Simple peace of mind that the heart believes
+                [00:25.00]Vinyl dust crackle on a vintage tape
+                [00:31.00]A quiet melody, an audio escape
+                [00:37.00]Soft low-end rhythm, steady and sublime
+                [00:43.00]Lost inside the tranquility of time
             """.trimIndent()
         ),
         Track(
-            id = "online_bass_03",
-            title = "Sub-Frequency Protocol",
-            artist = "Dolby Atmosfera",
-            album = "Subwoofer Odyssey",
-            durationMs = 192000,
-            audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-9.mp3",
-            coverUrl = "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=500&q=80",
+            id = "studio_bass_03",
+            title = "Sub-Bass Resonance Protocol",
+            artist = "Atmos Soundworks",
+            album = "Frequency Odyssey",
+            durationMs = 175000,
+            audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
+            coverUrl = "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=600&q=80",
             genre = "Deep Bass EDM",
-            isOnline = true,
-            isWinsTrack = false,
+            isOnline = false,
             moodTags = listOf("Energi & Workout", "Cyberpunk Drive"),
             lyricsLrc = """
-                [00:05.00]Activate the virtualizer, engage surround sound
-                [00:12.00]Deep sub-harmonics vibrating the ground
-                [00:19.00]Frequency sweeping from thirty up to twelve k
-                [00:26.00]Total sonic immersion taking you away
+                [00:03.00]Activate the virtualizer, engage the master gain
+                [00:09.10]Bass pressure building up like a thunder train
+                [00:15.00]Clean 30 hertz rumble shaking up the floor
+                [00:21.00]Pushing every speaker right beyond the core
+                [00:27.20]Spatial sound rotation thirty-six degrees
+                [00:33.00]Dolby surround power floating on the breeze
+                [00:39.10]Dynamic response, maximum punch
+                [00:45.30]High impact audio, hear the crisp crunch
+            """.trimIndent()
+        ),
+        Track(
+            id = "studio_acoustic_04",
+            title = "Golden Meadow Solitude",
+            artist = "Aura Acoustic Ensemble",
+            album = "Wooden Strings",
+            durationMs = 155000,
+            audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3",
+            coverUrl = "https://images.unsplash.com/photo-1487180144351-b8472da7d491?w=600&q=80",
+            genre = "Acoustic / Folk",
+            isOnline = false,
+            moodTags = listOf("Santai", "Melankolis"),
+            lyricsLrc = """
+                [00:02.50]Sunlight breaking softly through the tall pine trees
+                [00:08.00]Acoustic guitar whispers in the morning breeze
+                [00:14.00]Pure string vibration, natural and clear
+                [00:20.00]Bringing all the beauty of the silence near
+                [00:26.00]Chamber reverb echoes in the open sky
+                [00:32.00]Watching gentle clouds wandering on high
+                [00:38.50]Warmth in every strum, melody serene
+                [00:45.00]The calmest soundscape that has ever been
+            """.trimIndent()
+        ),
+        Track(
+            id = "studio_night_05",
+            title = "Nocturnal Horizon 3D",
+            artist = "Kinetics Sound Studio",
+            album = "After Midnight",
+            durationMs = 168000,
+            audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3",
+            coverUrl = "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&q=80",
+            genre = "Ambient / Chillstep",
+            isOnline = false,
+            moodTags = listOf("Malam Hari", "Melankolis", "Fokus Belajar"),
+            lyricsLrc = """
+                [00:04.00]Midnight stars align in constellation grace
+                [00:10.00]Traveling through time in an acoustic space
+                [00:16.00]Subtle delay lines cascading down the air
+                [00:22.00]Gentle audio frequencies everywhere
+                [00:28.00]Close your eyes and listen, let the mind relax
+                [00:34.00]Studio grade fidelity taking off the tax
+                [00:41.00]Serenade of echoes, drifting out of sight
+                [00:48.00]Peaceful meditation through the velvet night
+            """.trimIndent()
+        ),
+        Track(
+            id = "studio_focus_06",
+            title = "Deep Coding Flow State",
+            artist = "Synthetix Labs",
+            album = "Neural Beats",
+            durationMs = 180000,
+            audioUrl = "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3",
+            coverUrl = "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?w=600&q=80",
+            genre = "Electronic / Lo-Fi",
+            isOnline = false,
+            moodTags = listOf("Fokus Belajar", "Santai"),
+            lyricsLrc = """
+                [00:03.00]Constant metric rhythm, steady clockwork tick
+                [00:09.00]Synapses connecting, inspiration quick
+                [00:15.00]Clean harmonic balance, zero noise ahead
+                [00:21.00]Focus like an arrow through the paths we tread
+                [00:27.00]Binaural frequencies opening the mind
+                [00:33.00]Leaving all distractions far away behind
+                [00:40.00]Perfect stereo image, balanced left and right
+                [00:46.00]Working through the rhythm deep into the night
             """.trimIndent()
         )
     )
 
     fun getAllInitialTracks(): List<Track> {
-        return WINS_TRACKS + ONLINE_STATION_TRACKS
+        return STUDIO_TRACKS
     }
 
     fun scanLocalDeviceAudio(context: Context): List<Track> {
@@ -249,8 +178,8 @@ object MusicCatalog {
                 while (it.moveToNext()) {
                     val id = it.getLong(idCol)
                     val title = it.getString(titleCol) ?: "Lagu Lokal"
-                    val artist = it.getString(artistCol) ?: "Artis Tidak Dikenal"
-                    val album = it.getString(albumCol) ?: "Album Lokal"
+                    val artist = it.getString(artistCol) ?: "Artis Lokal"
+                    val album = it.getString(albumCol) ?: "Album Penyimpanan"
                     val duration = it.getLong(durCol)
                     val contentUri: Uri = ContentUris.withAppendedId(
                         MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
@@ -268,9 +197,8 @@ object MusicCatalog {
                             coverUrl = "",
                             genre = "Lokal / Perangkat",
                             isOnline = false,
-                            isWinsTrack = false,
                             moodTags = listOf("Santai", "Fokus Belajar"),
-                            lyricsLrc = "[00:00.00]Pemutaran berkas lokal dari penyimpanan perangkat"
+                            lyricsLrc = "[00:00.00]Pemutaran audio lokal dari penyimpanan perangkat"
                         )
                     )
                 }

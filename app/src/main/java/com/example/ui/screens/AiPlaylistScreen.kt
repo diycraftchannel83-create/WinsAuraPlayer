@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
+import com.example.ui.components.TrackItemRow
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -130,7 +131,7 @@ fun AiPlaylistScreen(
                                 color = TextPrimary
                             )
                             Text(
-                                text = "Penyusunan playlist berbasis mood & integrasi otomatis lagu wins",
+                                text = "Penyusunan playlist cerdas berbasis mood, tempo, dan akustik studio",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = TextSecondary
                             )

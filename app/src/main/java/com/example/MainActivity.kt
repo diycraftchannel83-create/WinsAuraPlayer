@@ -17,10 +17,10 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Album
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -36,22 +36,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.ads.AdMobManager
+import com.example.ui.components.AppOpenAdDialog
 import com.example.ui.components.BottomBannerAd
+import com.example.ui.components.InterstitialAdDialog
 import com.example.ui.components.MiniPlayerBar
-import com.example.ui.components.WelcomeAdDialog
 import com.example.ui.screens.AiPlaylistScreen
 import com.example.ui.screens.DspEqualizerScreen
 import com.example.ui.screens.LibraryScreen
 import com.example.ui.screens.NowPlayingModal
-import com.example.ui.screens.WinsOnlineScreen
+import com.example.ui.screens.NowPlayingScreen
 import com.example.ui.theme.AuraSoundTheme
-import com.example.ui.theme.DividerColor
-import com.example.ui.theme.ElectricBlue
 import com.example.ui.theme.NeonCyan
 import com.example.ui.theme.StudioCard
 import com.example.ui.theme.StudioDarkBg
 import com.example.ui.theme.TextPrimary
-import com.example.ui.theme.TextSecondary
 import com.example.ui.theme.TextTertiary
 import com.example.viewmodel.MusicViewModel
 import com.example.viewmodel.NavigationTab
@@ -60,6 +59,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        AdMobManager.initialize(applicationContext)
         setContent {
             AuraSoundTheme {
                 MainAppContent()
@@ -79,7 +79,8 @@ fun MainAppContent(viewModel: MusicViewModel = viewModel()) {
     val amplitudes by viewModel.amplitudes.collectAsStateWithLifecycle()
     val dspSettings by viewModel.dspSettings.collectAsStateWithLifecycle()
     val visualizerMode by viewModel.visualizerMode.collectAsStateWithLifecycle()
-    val welcomeAdVisible by viewModel.welcomeAdVisible.collectAsStateWithLifecycle()
+    val appOpenAdVisible by viewModel.appOpenAdVisible.collectAsStateWithLifecycle()
+    val interstitialAdVisible by viewModel.interstitialAdVisible.collectAsStateWithLifecycle()
     val isNowPlayingExpanded by viewModel.isNowPlayingExpanded.collectAsStateWithLifecycle()
 
     Box(modifier = Modifier.fillMaxSize().background(StudioDarkBg)) {
@@ -90,8 +91,8 @@ fun MainAppContent(viewModel: MusicViewModel = viewModel()) {
                         .fillMaxWidth()
                         .windowInsetsPadding(WindowInsets.navigationBars)
                 ) {
-                    // Mini player shown if track is selected
-                    if (currentTrack != null) {
+                    // Mini player shown if track is active and not on NOW_PLAYING tab
+                    if (currentTrack != null && activeTab != NavigationTab.NOW_PLAYING) {
                         MiniPlayerBar(
                             track = currentTrack!!,
                             isPlaying = isPlaying,
@@ -99,11 +100,11 @@ fun MainAppContent(viewModel: MusicViewModel = viewModel()) {
                             durationMs = durationMs,
                             onTogglePlayPause = { viewModel.togglePlayPause() },
                             onNext = { viewModel.playNext() },
-                            onClick = { viewModel.setNowPlayingExpanded(true) }
+                            onClick = { viewModel.setActiveTab(NavigationTab.NOW_PLAYING) }
                         )
                     }
 
-                    // Bottom Banner Ad: Slim & positioned non-intrusively above the NavigationBar
+                    // Bottom Banner Ad: Slim & positioned non-intrusively above navigation
                     BottomBannerAd()
 
                     // M3 Bottom Navigation Bar
@@ -112,20 +113,21 @@ fun MainAppContent(viewModel: MusicViewModel = viewModel()) {
                         contentColor = TextPrimary,
                         modifier = Modifier.testTag("main_bottom_nav")
                     ) {
+                        // 1. Now Playing Tab (replacing old online artist tab)
                         NavigationBarItem(
-                            selected = activeTab == NavigationTab.WINS_ONLINE,
-                            onClick = { viewModel.setActiveTab(NavigationTab.WINS_ONLINE) },
+                            selected = activeTab == NavigationTab.NOW_PLAYING,
+                            onClick = { viewModel.setActiveTab(NavigationTab.NOW_PLAYING) },
                             icon = {
                                 Icon(
-                                    imageVector = Icons.Default.Album,
-                                    contentDescription = "Wins & Daring"
+                                    imageVector = Icons.Default.PlayCircle,
+                                    contentDescription = "Pemutar Musik"
                                 )
                             },
                             label = {
                                 Text(
-                                    text = "Wins & Daring",
+                                    text = "Pemutar",
                                     fontSize = 11.sp,
-                                    fontWeight = if (activeTab == NavigationTab.WINS_ONLINE) FontWeight.Bold else FontWeight.Normal
+                                    fontWeight = if (activeTab == NavigationTab.NOW_PLAYING) FontWeight.Bold else FontWeight.Normal
                                 )
                             },
                             colors = NavigationBarItemDefaults.colors(
@@ -135,16 +137,17 @@ fun MainAppContent(viewModel: MusicViewModel = viewModel()) {
                                 unselectedIconColor = TextTertiary,
                                 unselectedTextColor = TextTertiary
                             ),
-                            modifier = Modifier.testTag("tab_wins_online")
+                            modifier = Modifier.testTag("tab_now_playing")
                         )
 
+                        // 2. Library Tab
                         NavigationBarItem(
                             selected = activeTab == NavigationTab.LIBRARY,
                             onClick = { viewModel.setActiveTab(NavigationTab.LIBRARY) },
                             icon = {
                                 Icon(
                                     imageVector = Icons.Default.LibraryMusic,
-                                    contentDescription = "Pustaka"
+                                    contentDescription = "Pustaka Musik"
                                 )
                             },
                             label = {
@@ -164,13 +167,14 @@ fun MainAppContent(viewModel: MusicViewModel = viewModel()) {
                             modifier = Modifier.testTag("tab_library")
                         )
 
+                        // 3. Audio FX & DSP Studio Tab
                         NavigationBarItem(
                             selected = activeTab == NavigationTab.DSP_STUDIO,
                             onClick = { viewModel.setActiveTab(NavigationTab.DSP_STUDIO) },
                             icon = {
                                 Icon(
                                     imageVector = Icons.Default.GraphicEq,
-                                    contentDescription = "Audio FX & DSP"
+                                    contentDescription = "Audio FX & Equalizer"
                                 )
                             },
                             label = {
@@ -190,6 +194,7 @@ fun MainAppContent(viewModel: MusicViewModel = viewModel()) {
                             modifier = Modifier.testTag("tab_dsp_studio")
                         )
 
+                        // 4. AI Cerdas Playlist Tab
                         NavigationBarItem(
                             selected = activeTab == NavigationTab.AI_PLAYLIST,
                             onClick = { viewModel.setActiveTab(NavigationTab.AI_PLAYLIST) },
@@ -226,11 +231,22 @@ fun MainAppContent(viewModel: MusicViewModel = viewModel()) {
                     .padding(innerPadding)
             ) {
                 when (activeTab) {
-                    NavigationTab.WINS_ONLINE -> {
-                        WinsOnlineScreen(
-                            currentTrack = currentTrack,
+                    NavigationTab.NOW_PLAYING -> {
+                        NowPlayingScreen(
+                            track = currentTrack ?: allTracks.firstOrNull(),
                             isPlaying = isPlaying,
-                            onTrackSelect = { viewModel.playTrack(it) }
+                            currentPositionMs = currentPositionMs,
+                            durationMs = durationMs,
+                            amplitudes = amplitudes,
+                            dspSettings = dspSettings,
+                            visualizerMode = visualizerMode,
+                            onChangeVisualizerMode = { viewModel.changeVisualizerMode(it) },
+                            onTogglePlayPause = { viewModel.togglePlayPause() },
+                            onSeekTo = { viewModel.seekTo(it) },
+                            onNext = { viewModel.playNext() },
+                            onPrevious = { viewModel.playPrevious() },
+                            onOpenDsp = { viewModel.setActiveTab(NavigationTab.DSP_STUDIO) },
+                            onShowAd = { viewModel.showInterstitialAd() }
                         )
                     }
 
@@ -239,7 +255,10 @@ fun MainAppContent(viewModel: MusicViewModel = viewModel()) {
                             tracks = allTracks,
                             currentTrack = currentTrack,
                             isPlaying = isPlaying,
-                            onTrackSelect = { viewModel.playTrack(it) },
+                            onTrackSelect = {
+                                viewModel.playTrack(it)
+                                viewModel.setActiveTab(NavigationTab.NOW_PLAYING)
+                            },
                             onScanDevice = { viewModel.scanDeviceAudio() }
                         )
                     }
@@ -256,7 +275,10 @@ fun MainAppContent(viewModel: MusicViewModel = viewModel()) {
                             allTracks = allTracks,
                             currentTrack = currentTrack,
                             isPlaying = isPlaying,
-                            onTrackSelect = { viewModel.playTrack(it) },
+                            onTrackSelect = {
+                                viewModel.playTrack(it)
+                                viewModel.setActiveTab(NavigationTab.NOW_PLAYING)
+                            },
                             onApplyEqPreset = { presetName ->
                                 viewModel.applyEqPreset(presetName)
                                 viewModel.setActiveTab(NavigationTab.DSP_STUDIO)
@@ -267,7 +289,7 @@ fun MainAppContent(viewModel: MusicViewModel = viewModel()) {
             }
         }
 
-        // Fullscreen Now Playing Modal Overlay
+        // Fullscreen Now Playing Modal Overlay (if opened as modal)
         AnimatedVisibility(
             visible = isNowPlayingExpanded && currentTrack != null,
             enter = slideInVertically(initialOffsetY = { it }),
@@ -296,10 +318,16 @@ fun MainAppContent(viewModel: MusicViewModel = viewModel()) {
             }
         }
 
-        // Welcome Ad Dialog on startup
-        WelcomeAdDialog(
-            visible = welcomeAdVisible,
-            onDismiss = { viewModel.dismissWelcomeAd() }
+        // App Open Ad on launch with ID ca-app-pub-1254774552944426/9151767484
+        AppOpenAdDialog(
+            visible = appOpenAdVisible,
+            onDismiss = { viewModel.dismissAppOpenAd() }
+        )
+
+        // Interstitial Ad with ID ca-app-pub-1254774552944426/3914322052
+        InterstitialAdDialog(
+            visible = interstitialAdVisible,
+            onDismiss = { viewModel.dismissInterstitialAd() }
         )
     }
 }

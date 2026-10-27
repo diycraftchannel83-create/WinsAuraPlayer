@@ -1,8 +1,7 @@
 package com.example.ui.components
 
+import android.app.Activity
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -11,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.Stars
 import androidx.compose.material3.Button
@@ -29,7 +30,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -42,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -49,7 +50,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.example.ads.AdMobManager
 import com.example.ui.theme.AccentAmber
+import com.example.ui.theme.AccentGreen
+import com.example.ui.theme.AccentMagenta
 import com.example.ui.theme.ElectricBlue
 import com.example.ui.theme.NeonCyan
 import com.example.ui.theme.StudioCard
@@ -61,18 +65,26 @@ import com.example.ui.theme.TextTertiary
 import kotlinx.coroutines.delay
 
 @Composable
-fun WelcomeAdDialog(
+fun AppOpenAdDialog(
     visible: Boolean,
     onDismiss: () -> Unit
 ) {
     if (!visible) return
 
+    val context = LocalContext.current
     var countdown by remember { mutableIntStateOf(3) }
 
     LaunchedEffect(Unit) {
-        while (countdown > 0) {
-            delay(1000L)
-            countdown--
+        val activity = context as? Activity
+        if (activity != null && AdMobManager.isAppOpenAdReady()) {
+            AdMobManager.showAppOpenAd(activity) {
+                onDismiss()
+            }
+        } else {
+            while (countdown > 0) {
+                delay(1000L)
+                countdown--
+            }
         }
     }
 
@@ -81,21 +93,21 @@ fun WelcomeAdDialog(
         properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = false)
     ) {
         Card(
-            shape = RoundedCornerShape(20.dp),
+            shape = RoundedCornerShape(22.dp),
             colors = CardDefaults.cardColors(containerColor = StudioCardElevated),
             border = androidx.compose.foundation.BorderStroke(
                 1.dp,
-                Brush.linearGradient(listOf(NeonCyan.copy(alpha = 0.5f), ElectricBlue.copy(alpha = 0.2f)))
+                Brush.linearGradient(listOf(NeonCyan.copy(alpha = 0.6f), ElectricBlue.copy(alpha = 0.3f)))
             ),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(8.dp)
-                .testTag("welcome_ad_dialog")
+                .padding(6.dp)
+                .testTag("app_open_ad_dialog")
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp),
+                    .padding(22.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Row(
@@ -109,7 +121,7 @@ fun WelcomeAdDialog(
                             .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Text(
-                            text = "IKLAN SPONSOR",
+                            text = "APP OPEN AD",
                             color = AccentAmber,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold
@@ -120,7 +132,7 @@ fun WelcomeAdDialog(
                         onClick = onDismiss,
                         modifier = Modifier
                             .size(36.dp)
-                            .testTag("close_ad_button")
+                            .testTag("close_app_open_ad_button")
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
@@ -130,13 +142,13 @@ fun WelcomeAdDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
                 Box(
                     modifier = Modifier
-                        .size(72.dp)
+                        .size(68.dp)
                         .background(
-                            Brush.linearGradient(listOf(NeonCyan.copy(alpha = 0.2f), ElectricBlue.copy(alpha = 0.1f))),
+                            Brush.linearGradient(listOf(NeonCyan.copy(alpha = 0.25f), ElectricBlue.copy(alpha = 0.15f))),
                             CircleShape
                         )
                         .border(1.5.dp, NeonCyan, CircleShape),
@@ -146,23 +158,30 @@ fun WelcomeAdDialog(
                         imageVector = Icons.Default.Headphones,
                         contentDescription = null,
                         tint = NeonCyan,
-                        modifier = Modifier.size(38.dp)
+                        modifier = Modifier.size(36.dp)
                     )
                 }
 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
-                    text = "AuraSound Hi-Fi Studio Pro",
+                    text = "AuraSound Studio Hi-Fi",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
                 )
 
-                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "Unit ID: ${AdMobManager.APP_OPEN_AD_UNIT_ID}",
+                    fontSize = 10.sp,
+                    color = TextTertiary,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "Nikmati audio 32-bit tanpa kompresi, 10-Band EQ, dan kurasi artist wins otomatis. Musik kelas studio di tangan Anda.",
+                    text = "Pemutar audio studio dengan 10-Band EQ, Bass Booster, dan visualizer neon dinamis. Selamat datang di pengalaman musik audiofil terbaik.",
                     style = MaterialTheme.typography.bodySmall,
                     color = TextSecondary,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -178,13 +197,155 @@ fun WelcomeAdDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp)
-                        .testTag("continue_to_app_button")
+                        .testTag("continue_from_open_ad_button")
                 ) {
                     Text(
-                        text = if (countdown > 0) "Lanjut ke Musik ($countdown detik)" else "Mulai Mendengarkan Sekarang",
+                        text = if (countdown > 0) "Lanjut ke Musik ($countdown detik)" else "Buka Aplikasi Sekarang",
                         color = StudioDarkBg,
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun InterstitialAdDialog(
+    visible: Boolean,
+    onDismiss: () -> Unit
+) {
+    if (!visible) return
+
+    val context = LocalContext.current
+    var countdown by remember { mutableIntStateOf(2) }
+
+    LaunchedEffect(Unit) {
+        val activity = context as? Activity
+        if (activity != null && AdMobManager.isInterstitialAdReady()) {
+            AdMobManager.showInterstitialAd(activity) {
+                onDismiss()
+            }
+        } else {
+            while (countdown > 0) {
+                delay(1000L)
+                countdown--
+            }
+        }
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = false)
+    ) {
+        Card(
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = StudioCardElevated),
+            border = androidx.compose.foundation.BorderStroke(
+                1.dp,
+                Brush.linearGradient(listOf(AccentMagenta.copy(alpha = 0.5f), ElectricBlue.copy(alpha = 0.3f)))
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(6.dp)
+                .testTag("interstitial_ad_dialog")
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .background(AccentMagenta.copy(alpha = 0.2f), RoundedCornerShape(6.dp))
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                    ) {
+                        Text(
+                            text = "INTERSTITIAL AD",
+                            color = AccentMagenta,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .testTag("close_interstitial_ad_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Tutup",
+                            tint = TextSecondary
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                Box(
+                    modifier = Modifier
+                        .size(60.dp)
+                        .background(AccentMagenta.copy(alpha = 0.15f), CircleShape)
+                        .border(1.5.dp, AccentMagenta, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.GraphicEq,
+                        contentDescription = null,
+                        tint = AccentMagenta,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = "AuraSound Dolby 3D Spatial Audio",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
+                )
+
+                Text(
+                    text = "Unit ID: ${AdMobManager.INTERSTITIAL_AD_UNIT_ID}",
+                    fontSize = 10.sp,
+                    color = TextTertiary,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "Aktifkan efek audio Dolby 3D surround sound dan bass boost untuk kedalaman frekuensi maksimal.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                Button(
+                    onClick = onDismiss,
+                    colors = ButtonDefaults.buttonColors(containerColor = AccentMagenta),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(46.dp)
+                        .testTag("dismiss_interstitial_button")
+                ) {
+                    Text(
+                        text = if (countdown > 0) "Tutup ($countdown)" else "Lanjutkan",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }

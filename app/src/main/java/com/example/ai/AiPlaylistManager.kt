@@ -25,11 +25,11 @@ object AiPlaylistManager {
 
     val GENRES = listOf(
         "Semua Genre",
-        "Lo-Fi / Hip-Hop",
-        "Underground Hip-Hop",
-        "Soulful Lo-Fi",
-        "Synthwave",
-        "Deep Bass EDM"
+        "Synthwave / Electronic",
+        "Lo-Fi / Mellow",
+        "Deep Bass EDM",
+        "Acoustic / Folk",
+        "Ambient / Chillstep"
     )
 
     suspend fun generateSmartPlaylist(
@@ -37,71 +37,49 @@ object AiPlaylistManager {
         genre: String,
         allAvailableTracks: List<Track>
     ): GeneratedPlaylist {
-        // Simulate AI neural reasoning latency for natural UX
-        delay(900L)
+        delay(700L)
 
-        val matchingTracks = mutableListOf<Track>()
-
-        // 1. Prioritize Artist 'wins' matching mood or genre
-        val winsMatches = allAvailableTracks.filter { track ->
-            track.isWinsTrack && (
-                track.moodTags.contains(mood) ||
-                genre == "Semua Genre" ||
-                track.genre.contains(genre, ignoreCase = true)
-            )
-        }
-
-        // 2. Complementary tracks
-        val otherMatches = allAvailableTracks.filter { track ->
-            !track.isWinsTrack && (
-                track.moodTags.contains(mood) ||
-                genre == "Semua Genre" ||
-                track.genre.contains(genre, ignoreCase = true)
-            )
-        }
-
-        // 3. Fallback if narrow filter
-        if (winsMatches.isNotEmpty()) {
-            matchingTracks.addAll(winsMatches)
-        }
-        matchingTracks.addAll(otherMatches)
+        val matchingTracks = allAvailableTracks.filter { track ->
+            val matchMood = track.moodTags.contains(mood)
+            val matchGenre = genre == "Semua Genre" || track.genre.contains(genre, ignoreCase = true)
+            matchMood || matchGenre
+        }.toMutableList()
 
         if (matchingTracks.isEmpty()) {
-            matchingTracks.addAll(allAvailableTracks.take(5))
+            matchingTracks.addAll(allAvailableTracks.take(4))
         }
 
-        // Distinct and shuffle intelligently
         val finalTracks = matchingTracks.distinctBy { it.id }
 
         val (title, description, eqPreset) = when (mood) {
             "Santai" -> Triple(
-                "Wins Lo-Fi Chill & Warmth",
-                "Playlist santai yang memadukan beat lo-fi lembut dari artist wins (chill, Love, wins) untuk relaksasi total tanpa gangguan.",
-                "Wins Lo-Fi HipHop"
-            )
-            "Fokus Belajar" -> Triple(
-                "Deep Focus: Underground Tape Flow",
-                "Aliran ritme hip-hop konsisten dengan tempo teratur dari artis wins (price, chill) untuk meningkatkan konsentrasi belajar dan bekerja.",
+                "Aura Chill & Mellow Sanctuary",
+                "Playlist santai yang dirancang untuk menurunkan tingkat stres dan menenangkan pikiran dengan ritme lo-fi yang hangat.",
                 "Studio Master"
             )
+            "Fokus Belajar" -> Triple(
+                "Deep Focus: Binaural Flow State",
+                "Aliran melodi harmonis berfrekuensi stabil untuk membantu konsentrasi belajar, membaca, atau bekerja bebas gangguan.",
+                "Flat / Natural"
+            )
             "Malam Hari" -> Triple(
-                "Late Night Gotham & Midnight Echoes",
-                "Vibes malam yang intim dengan bassline mendalam dan vokal khas wins (gotham, church) untuk menemani perjalanan malam.",
+                "Late Night Cyber & Nocturnal Echoes",
+                "Suasana malam hari yang luas dengan efek Dolby 3D spatial surround sound dan reverb mendalam.",
                 "Dolby 3D Cinema"
             )
             "Energi & Workout" -> Triple(
-                "Heavy Bass Punch: Wins Workout Protocol",
-                "Dentuman ritme bertenaga tinggi (whoa, step) dengan kick drum tajam untuk memacu adrenalin saat olahraga.",
+                "High Voltage: Heavy Bass Protocol",
+                "Dentuman ritme bertenaga tinggi dengan kick drum tajam untuk memacu adrenalin dan stamina olahraga.",
                 "Bass Booster Extreme"
             )
             "Melankolis" -> Triple(
-                "Nostalgic Resonance & Vinyl Memories",
-                "Harmoni soulful dan nada puitis dari wins (Love, wins, chill) dengan tekstur analog yang menghangatkan.",
+                "Acoustic Solitude & Strings",
+                "Harmoni lembut dan nada gitar akustik alami dengan kehangatan vokal yang menyentuh hati.",
                 "Acoustic & Vocal"
             )
             "Cyberpunk Drive" -> Triple(
-                "Neon Horizon: Futuristic Bass Odyssey",
-                "Transisi dinamis antara electronic sub-frequency dan flow rap underground untuk pengalaman audio spasial 3D maksimal.",
+                "Neon Horizon: Electronic Odyssey",
+                "Transisi dinamis antara synthwave modern dan bass booster untuk pengalaman berkendara yang futuristik.",
                 "Dolby 3D Cinema"
             )
             else -> Triple(

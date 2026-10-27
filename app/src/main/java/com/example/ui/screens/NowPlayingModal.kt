@@ -138,6 +138,30 @@ fun NowPlayingModal(
             .statusBarsPadding()
             .testTag("now_playing_modal")
     ) {
+        // Ambient Album Cover Background
+        if (track.coverUrl.isNotEmpty()) {
+            AsyncImage(
+                model = track.coverUrl,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+            // Multi-stop gradient overlay for deep dark ambiance and high contrast
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                StudioDarkBg.copy(alpha = 0.82f),
+                                StudioDarkBg.copy(alpha = 0.88f),
+                                StudioDarkBg.copy(alpha = 0.96f)
+                            )
+                        )
+                    )
+            )
+        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -361,22 +385,6 @@ fun NowPlayingModal(
                         color = NeonCyan,
                         fontWeight = FontWeight.SemiBold
                     )
-                }
-
-                if (track.isWinsTrack) {
-                    Box(
-                        modifier = Modifier
-                            .background(NeonCyan.copy(alpha = 0.15f), RoundedCornerShape(8.dp))
-                            .border(1.dp, NeonCyan.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                            .padding(horizontal = 10.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = "ARTIS WINS",
-                            color = NeonCyan,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
                 }
             }
 

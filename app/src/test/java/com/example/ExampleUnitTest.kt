@@ -1,12 +1,12 @@
 package com.example
 
+import com.example.ads.AdMobManager
 import com.example.ai.AiPlaylistManager
 import com.example.data.MusicCatalog
 import com.example.model.DspSettings
 import com.example.model.LrcParser
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -30,31 +30,28 @@ class ExampleUnitTest {
     }
 
     @Test
-    fun winsTracks_containsSpotifyArtistWinsCatalog() {
-        val winsTracks = MusicCatalog.WINS_TRACKS
-        assertTrue("Wins catalog must contain tracks", winsTracks.isNotEmpty())
-        winsTracks.forEach { track ->
-            assertEquals("wins", track.artist)
-            assertTrue("Track must be marked as wins track", track.isWinsTrack)
+    fun studioTracks_containsStudioCatalog() {
+        val studioTracks = MusicCatalog.STUDIO_TRACKS
+        assertTrue("Studio catalog must contain tracks", studioTracks.isNotEmpty())
+        studioTracks.forEach { track ->
+            assertTrue("Track title must not be blank", track.title.isNotBlank())
             assertTrue("Track duration must be greater than 0", track.durationMs > 0)
             assertNotNull(track.audioUrl)
         }
     }
 
     @Test
-    fun aiPlaylistManager_generatesMoodBasedPlaylistWithWins() = runBlocking {
+    fun aiPlaylistManager_generatesMoodBasedPlaylist() = runBlocking {
         val allTracks = MusicCatalog.getAllInitialTracks()
         val playlist = AiPlaylistManager.generateSmartPlaylist(
             mood = "Santai",
-            genre = "Lo-Fi / Hip-Hop",
+            genre = "Lo-Fi / Mellow",
             allAvailableTracks = allTracks
         )
 
         assertNotNull(playlist)
         assertTrue(playlist.tracks.isNotEmpty())
-        val hasWins = playlist.tracks.any { it.isWinsTrack }
-        assertTrue("Generated playlist must include artist wins", hasWins)
-        assertEquals("Wins Lo-Fi HipHop", playlist.recommendedEqPreset)
+        assertEquals("Studio Master", playlist.recommendedEqPreset)
     }
 
     @Test
@@ -64,6 +61,11 @@ class ExampleUnitTest {
         assertTrue(DspSettings.PRESETS.containsKey("Studio Master"))
         assertTrue(DspSettings.PRESETS.containsKey("Bass Booster Extreme"))
         assertTrue(DspSettings.PRESETS.containsKey("Dolby 3D Cinema"))
-        assertTrue(DspSettings.PRESETS.containsKey("Wins Lo-Fi HipHop"))
+    }
+
+    @Test
+    fun adMobManager_configuredWithCorrectAdUnits() {
+        assertEquals("ca-app-pub-1254774552944426/9151767484", AdMobManager.APP_OPEN_AD_UNIT_ID)
+        assertEquals("ca-app-pub-1254774552944426/3914322052", AdMobManager.INTERSTITIAL_AD_UNIT_ID)
     }
 }

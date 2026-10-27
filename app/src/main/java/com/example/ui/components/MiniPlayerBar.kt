@@ -119,21 +119,6 @@ fun MiniPlayerBar(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
-                        if (track.isWinsTrack) {
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Box(
-                                modifier = Modifier
-                                    .background(NeonCyan.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
-                                    .padding(horizontal = 4.dp, vertical = 1.dp)
-                            ) {
-                                Text(
-                                    text = "WINS",
-                                    color = NeonCyan,
-                                    fontSize = 8.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
                     }
                     Text(
                         text = "${track.artist} • ${track.album}",
