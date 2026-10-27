@@ -53,10 +53,7 @@ object Mp3LyricsReader {
             if (offset < 0 || offset > tag.size) return ""
         }
 
-        // ID3v2.4 can mark frames as unsynchronised; this parser supports regular ID3v2.3/2.4 frames.
         while (offset + 10 <= tag.size) {
-            // ID3v2.4 uses frame-level unsynchronisation in some files. Skip those frames
-            // if flagged, instead of attempting to decode potentially altered text bytes.
             val id = String(tag, offset, 4, StandardCharsets.ISO_8859_1)
             if (id.all { it == '\u0000' }) break
             if (!id.all { it in 'A'..'Z' || it in '0'..'9' }) break
