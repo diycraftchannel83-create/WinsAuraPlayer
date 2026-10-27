@@ -128,7 +128,6 @@ object MusicCatalog {
             retriever.setDataSource(context, uri)
             (
                 retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_LYRIC)
-                    ?: retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_LYRICS)
             )?.trim().orEmpty()
         } catch (e: Exception) {
             Log.w("MusicCatalog", "Embedded lyrics unavailable for $uri", e)
