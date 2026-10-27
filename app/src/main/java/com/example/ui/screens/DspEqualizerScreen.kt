@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -16,6 +17,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -38,6 +41,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
@@ -368,13 +372,16 @@ fun DspEqualizerScreen(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // 10-Band Sliders in vertical layout
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                // Compact 10-band vertical faders: swipe up to boost, down to cut.
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.Bottom
                 ) {
                     dspSettings.bands.forEachIndexed { idx, band ->
-                        BandRow(
+                        BandColumn(
                             band = band,
                             enabled = dspSettings.isEnabled,
                             onLevelChange = { newLevel ->
@@ -451,108 +458,114 @@ fun DspEqualizerScreen(
 }
 
 @Composable
-private fun BandRow(
+private fun BandColumn(
     band: EqualizerBand,
     enabled: Boolean,
     onLevelChange: (Int) -> Unit
 ) {
-    Card(
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = StudioCard),
-        border = androidx.compose.foundation.BorderStroke(0.8.dp, DividerColor),
+    Column(
         modifier = Modifier
-            .fillMaxWidth()
-            .testTag("equalizer_band_${band.index}")
+            .width(30.dp)
+            .testTag("equalizer_band_${band.index}"),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column(
+        Text(
+            text = band.formattedDb(),
+            color = if (band.levelMb > 0) NeonCyan else if (band.levelMb < 0) AccentMagenta else TextSecondary,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1
+        )
+        Spacer(modifier = Modifier.height(5.dp))
+        VerticalBandSlider(
+            value = band.levelMb,
+            enabled = enabled,
+            onValueChange = onLevelChange,
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 10.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .background(
-                                Brush.horizontalGradient(
-                                    listOf(NeonCyan.copy(alpha = 0.2f), ElectricBlue.copy(alpha = 0.2f))
-                                ),
-                                RoundedCornerShape(6.dp)
-                            )
-                            .border(1.dp, NeonCyan.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
-                            .padding(horizontal = 10.dp, vertical = 3.dp)
-                    ) {
-                        Text(
-                            text = band.formattedFreq(),
-                            color = NeonCyan,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                .width(28.dp)
+                .height(112.dp)
+                .testTag("band_slider_${band.index}")
+        )
+        Spacer(modifier = Modifier.height(5.dp))
+        Text(
+            text = band.formattedFreq(),
+            color = NeonCyan,
+            fontSize = 9.sp,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1
+        )
+    }
+}
+
+@Composable
+private fun VerticalBandSlider(
+    value: Int,
+    enabled: Boolean,
+    onValueChange: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val trackColor = DividerColor
+    val activeColor = NeonCyan
+    val zeroColor = TextTertiary
+
+    Canvas(
+        modifier = modifier
+            .pointerInput(enabled) {
+                if (enabled) {
+                    detectTapGestures { offset ->
+                        val fraction = (offset.y / size.height.toFloat()).coerceIn(0f, 1f)
+                        onValueChange((1500f - fraction * 3000f).toInt())
                     }
-
-                    Spacer(modifier = Modifier.width(10.dp))
-
-                    Text(
-                        text = when (band.index) {
-                            0, 1 -> "Sub-Bass"
-                            2, 3 -> "Bass & Low-Mid"
-                            4, 5 -> "Midrange Vokal"
-                            6, 7 -> "Upper-Mid / Clarity"
-                            else -> "High Treble / Air"
-                        },
-                        fontSize = 11.sp,
-                        color = TextTertiary
-                    )
                 }
-
-                Text(
-                    text = band.formattedDb(),
-                    color = if (band.levelMb > 0) NeonCyan else if (band.levelMb < 0) AccentMagenta else TextSecondary,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold
-                )
             }
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "-15dB",
-                    fontSize = 10.sp,
-                    color = TextTertiary,
-                    modifier = Modifier.width(36.dp)
-                )
-
-                Slider(
-                    value = band.levelMb.toFloat(),
-                    onValueChange = { onLevelChange(it.toInt()) },
-                    valueRange = -1500f..1500f,
-                    enabled = enabled,
-                    colors = SliderDefaults.colors(
-                        thumbColor = NeonCyan,
-                        activeTrackColor = NeonCyan,
-                        inactiveTrackColor = DividerColor
-                    ),
-                    modifier = Modifier
-                        .weight(1f)
-                        .testTag("band_slider_${band.index}")
-                )
-
-                Text(
-                    text = "+15dB",
-                    fontSize = 10.sp,
-                    color = TextTertiary,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.End,
-                    modifier = Modifier.width(36.dp)
-                )
+            .pointerInput(enabled) {
+                if (enabled) {
+                    detectDragGestures { change, _ ->
+                        change.consume()
+                        val fraction = (change.position.y / size.height.toFloat()).coerceIn(0f, 1f)
+                        onValueChange((1500f - fraction * 3000f).toInt())
+                    }
+                }
             }
-        }
+    ) {
+        val centerX = size.width / 2f
+        val top = 5.dp.toPx()
+        val bottom = size.height - 5.dp.toPx()
+        val centerY = (top + bottom) / 2f
+        val thumbY = centerY - (value.coerceIn(-1500, 1500) / 1500f) * ((bottom - top) / 2f)
+        val trackWidth = 4.dp.toPx()
+        val thumbRadius = 6.dp.toPx()
+
+        drawRoundRect(
+            color = trackColor,
+            topLeft = androidx.compose.ui.geometry.Offset(centerX - trackWidth / 2f, top),
+            size = androidx.compose.ui.geometry.Size(trackWidth, bottom - top),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(trackWidth / 2f)
+        )
+        drawLine(
+            color = zeroColor,
+            start = androidx.compose.ui.geometry.Offset(centerX - 7.dp.toPx(), centerY),
+            end = androidx.compose.ui.geometry.Offset(centerX + 7.dp.toPx(), centerY),
+            strokeWidth = 1.dp.toPx()
+        )
+        drawRoundRect(
+            color = activeColor.copy(alpha = if (enabled) 0.9f else 0.35f),
+            topLeft = androidx.compose.ui.geometry.Offset(
+                centerX - trackWidth / 2f,
+                minOf(centerY, thumbY)
+            ),
+            size = androidx.compose.ui.geometry.Size(trackWidth, kotlin.math.abs(centerY - thumbY)),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(trackWidth / 2f)
+        )
+        drawCircle(
+            color = if (enabled) activeColor else TextTertiary,
+            radius = thumbRadius,
+            center = androidx.compose.ui.geometry.Offset(centerX, thumbY)
+        )
+        drawCircle(
+            color = StudioCardElevated,
+            radius = thumbRadius * 0.42f,
+            center = androidx.compose.ui.geometry.Offset(centerX, thumbY)
+        )
     }
 }
