@@ -11,7 +11,13 @@ object LrcParser {
     fun parse(lrcContent: String): List<LyricsLine> {
         if (lrcContent.isBlank()) return emptyList()
         val lines = mutableListOf<LyricsLine>()
-        for (line in lrcContent.lines()) {
+        val sourceLines = lrcContent.lines().filter { it.isNotBlank() }
+        val hasTimestamps = sourceLines.any { LRC_REGEX.containsMatchIn(it.trim()) }
+        if (!hasTimestamps) {
+            // Plain embedded ID3 lyrics have no timing; keep every line visible in the lyrics view.
+            return sourceLines.mapIndexed { index, line -> LyricsLine(index * 4000L, line.trim()) }
+        }
+        for (line in sourceLines) {
             val trimmed = line.trim()
             val match = LRC_REGEX.find(trimmed)
             if (match != null) {
