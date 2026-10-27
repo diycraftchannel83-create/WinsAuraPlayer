@@ -50,6 +50,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -112,6 +113,7 @@ fun NowPlayingModal(
     onPrevious: () -> Unit,
     repeatMode: RepeatMode = RepeatMode.OFF,
     onCycleRepeatMode: () -> Unit = {},
+    onLoadLyrics: ((Track, (String) -> Unit) -> Unit)? = null,
     onOpenDsp: () -> Unit,
     onDismiss: () -> Unit,
     isDarkMode: Boolean = true,
@@ -134,8 +136,17 @@ fun NowPlayingModal(
         label = "rotation"
     )
 
-    val parsedLyrics = remember(track.lyricsLrc) {
-        LrcParser.parse(track.lyricsLrc)
+    var effectiveLyrics by remember(track.id, track.lyricsLrc) {
+        mutableStateOf(track.lyricsLrc)
+    }
+    LaunchedEffect(track.id, track.audioUrl, track.lyricsLrc) {
+        effectiveLyrics = track.lyricsLrc
+        if (effectiveLyrics.isBlank()) {
+            onLoadLyrics?.invoke(track) { loaded -> effectiveLyrics = loaded }
+        }
+    }
+    val parsedLyrics = remember(effectiveLyrics) {
+        LrcParser.parse(effectiveLyrics)
     }
 
     Box(
