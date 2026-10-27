@@ -36,6 +36,7 @@ object Mp3LyricsReader {
         ) return ""
 
         val majorVersion = header[3].toInt() and 0xff
+        // Support the common ID3v2.3 and v2.4 frame layouts.
         if (majorVersion !in 3..4) return ""
         // ID3v2.2 uses a different six-byte frame layout; this reader handles v2.3/v2.4.
 
