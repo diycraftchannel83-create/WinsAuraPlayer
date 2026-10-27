@@ -34,7 +34,7 @@ object MusicCatalog {
     private fun embeddedLyrics(context: Context, uri: Uri): String {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return ""
         val r = MediaMetadataRetriever()
-        return try { r.setDataSource(context, uri); r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_LYRICS)?.trim().orEmpty() }
+        return try { r.setDataSource(context, uri); "" }
         catch (_: Exception) { "" }
         finally { try { r.release() } catch (_: Exception) { } }
     }
