@@ -69,6 +69,10 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     val currentPositionMs = playerManager.currentPositionMs
     val durationMs = playerManager.durationMs
     val amplitudes = playerManager.amplitudes
+    val stemNames = playerManager.stemNames
+
+    fun loadStem(channel: Int, uri: android.net.Uri) = playerManager.loadStem(channel, uri)
+    fun clearStems() = playerManager.clearStems()
 
     private var songChangeCount = 0
 
