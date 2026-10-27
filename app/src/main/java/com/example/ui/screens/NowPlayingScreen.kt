@@ -67,6 +67,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.model.DspSettings
 import com.example.model.LrcParser
+import com.example.model.RepeatMode
 import com.example.model.Track
 import com.example.model.VisualizerMode
 import com.example.ui.components.AudioCoverImage
@@ -98,6 +99,8 @@ fun NowPlayingScreen(
     onSeekTo: (Long) -> Unit,
     onNext: () -> Unit,
     onPrevious: () -> Unit,
+    repeatMode: RepeatMode = RepeatMode.OFF,
+    onCycleRepeatMode: () -> Unit = {},
     onOpenDsp: () -> Unit,
     onShowAd: () -> Unit = {},
     isDarkMode: Boolean = true,
@@ -131,7 +134,6 @@ fun NowPlayingScreen(
 
     var centerMode by remember { mutableStateOf(CenterDisplayMode.ALBUM_ART) }
     var isShuffle by remember { mutableStateOf(false) }
-    var isRepeat by remember { mutableStateOf(false) }
 
     val infiniteTransition = rememberInfiniteTransition(label = "screen_disc_rotation")
     val rotationAngle by infiniteTransition.animateFloat(
@@ -585,14 +587,21 @@ fun NowPlayingScreen(
             }
 
             IconButton(
-                onClick = { isRepeat = !isRepeat },
+                onClick = onCycleRepeatMode,
                 modifier = Modifier.testTag("screen_repeat_button")
             ) {
                 Icon(
-                    imageVector = if (isRepeat) Icons.Default.RepeatOne else Icons.Default.Repeat,
-                    contentDescription = "Ulangi",
-                    tint = if (isRepeat) NeonCyan else TextTertiary
+                    imageVector = if (repeatMode == RepeatMode.ONE) Icons.Default.RepeatOne else Icons.Default.Repeat,
+                    contentDescription = when (repeatMode) {
+                        RepeatMode.OFF -> "Repeat mati"
+                        RepeatMode.ONE -> "Repeat One aktif"
+                        RepeatMode.ALL -> "Repeat All aktif"
+                    },
+                    tint = if (repeatMode != RepeatMode.OFF) NeonCyan else TextTertiary
                 )
+                if (repeatMode == RepeatMode.ALL) {
+                    Text("ALL", fontSize = 8.sp, color = NeonCyan, fontWeight = FontWeight.Bold)
+                }
             }
         }
 
