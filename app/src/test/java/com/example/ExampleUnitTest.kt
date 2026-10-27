@@ -87,7 +87,7 @@ class ExampleUnitTest {
     @Test
     fun adMobManagerHasConfiguredAdUnits() {
         assertEquals("ca-app-pub-1254774552944426/9151767484", AdMobManager.APP_OPEN_AD_UNIT_ID)
-        assertEquals("ca-app-pub-1254774552944426/3914322052", AdMobManager.INTERSTITIAL_AD_UNIT_ID)
+        assertEquals("ca-app-pub-1254774552944426/5166396802", AdMobManager.INTERSTITIAL_AD_UNIT_ID)
     }
 
 }
