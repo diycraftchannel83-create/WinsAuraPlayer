@@ -444,7 +444,7 @@ fun DspEqualizerScreen(
                                     else -> dspSettings.copy(effectGainDb = gain)
                                 }
                                 onUpdateDspSettings(updated)
-                            }, modifier = Modifier.fillMaxWidth().height(108.dp).testTag("mixer_fader_$index"))
+                            }, modifier = Modifier.fillMaxWidth().height(108.dp).testTag("mixer_fader_$index"), maxValue = 1200)
                         }
                     }
                 }
@@ -501,7 +501,8 @@ private fun VerticalBandSlider(
     value: Int,
     enabled: Boolean,
     onValueChange: (Int) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    maxValue: Int = 1500
 ) {
     val trackColor = DividerColor
     val activeColor = NeonCyan
@@ -509,20 +510,20 @@ private fun VerticalBandSlider(
 
     Canvas(
         modifier = modifier
-            .pointerInput(enabled) {
+            .pointerInput(enabled, maxValue) {
                 if (enabled) {
                     detectTapGestures { offset ->
                         val fraction = (offset.y / size.height.toFloat()).coerceIn(0f, 1f)
-                        onValueChange((1500f - fraction * 3000f).toInt())
+                        onValueChange((maxValue.toFloat() - fraction * maxValue * 2f).toInt())
                     }
                 }
             }
-            .pointerInput(enabled) {
+            .pointerInput(enabled, maxValue) {
                 if (enabled) {
                     detectDragGestures { change, _ ->
                         change.consume()
                         val fraction = (change.position.y / size.height.toFloat()).coerceIn(0f, 1f)
-                        onValueChange((1500f - fraction * 3000f).toInt())
+                        onValueChange((maxValue.toFloat() - fraction * maxValue * 2f).toInt())
                     }
                 }
             }
@@ -531,7 +532,7 @@ private fun VerticalBandSlider(
         val top = 5.dp.toPx()
         val bottom = size.height - 5.dp.toPx()
         val centerY = (top + bottom) / 2f
-        val thumbY = centerY - (value.coerceIn(-1500, 1500) / 1500f) * ((bottom - top) / 2f)
+        val thumbY = centerY - (value.coerceIn(-maxValue, maxValue).toFloat() / maxValue.toFloat()) * ((bottom - top) / 2f)
         val trackWidth = 4.dp.toPx()
         val thumbRadius = 6.dp.toPx()
 
