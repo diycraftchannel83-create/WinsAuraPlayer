@@ -2,6 +2,7 @@ package com.example.data
 
 import android.content.Context
 import android.net.Uri
+import java.io.ByteArrayInputStream
 import android.util.Log
 import java.io.InputStream
 import java.nio.charset.Charset
@@ -16,6 +17,9 @@ import java.nio.charset.StandardCharsets
 object Mp3LyricsReader {
     private const val TAG = "Mp3LyricsReader"
     private const val MAX_TAG_SIZE_BYTES = 4 * 1024 * 1024
+
+    internal fun readLyricsFromStreamForTest(bytes: ByteArray): String =
+        ByteArrayInputStream(bytes).use(::readLyricsFromId3Tag)
 
     fun readLyrics(context: Context, audioUri: String): String {
         return try {
