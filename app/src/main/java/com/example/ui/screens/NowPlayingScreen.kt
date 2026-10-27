@@ -463,7 +463,7 @@ fun NowPlayingScreen(
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = "${track.artist} • ${track.genre}",
+                text = track.artist,
                 style = MaterialTheme.typography.bodyMedium,
                 color = NeonCyan,
                 fontWeight = FontWeight.SemiBold
