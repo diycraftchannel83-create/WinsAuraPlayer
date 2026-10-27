@@ -39,6 +39,9 @@ import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.SurroundSound
 import androidx.compose.material.icons.filled.Waves
 import androidx.compose.material3.Card
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -62,6 +65,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import android.media.MediaMetadataRetriever
+import android.content.ContentValues
+import android.net.Uri
+import android.provider.MediaStore
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -153,6 +160,9 @@ fun NowPlayingScreen(
     )
 
     val context = LocalContext.current
+    var showTagEditor by remember(track.id) { mutableStateOf(false) }
+    var tagStatus by remember(track.id) { mutableStateOf<String?>(null) }
+    val editableTags = remember(track.id) { androidx.compose.runtime.mutableStateMapOf<String, String>() }
     var onlineLyrics by remember(track.id) { mutableStateOf(track.lyricsLrc) }
     var isLoadingLyrics by remember(track.id) { mutableStateOf(false) }
     var lyricsRetryCount by remember(track.id) { mutableStateOf(0) }
@@ -459,6 +469,40 @@ fun NowPlayingScreen(
         Column(modifier = Modifier.fillMaxWidth()) {
             Text(
                 text = track.title,
+                modifier = Modifier.clickable {
+                    val values = mutableMapOf<String, String>()
+                    val retriever = MediaMetadataRetriever()
+                    try {
+                        retriever.setDataSource(context, Uri.parse(track.audioUrl))
+                        val fields = listOf(
+                            MediaMetadataRetriever.METADATA_KEY_TITLE to "Judul",
+                            MediaMetadataRetriever.METADATA_KEY_ARTIST to "Artis",
+                            MediaMetadataRetriever.METADATA_KEY_ALBUM to "Album",
+                            MediaMetadataRetriever.METADATA_KEY_ALBUMARTIST to "Artis Album",
+                            MediaMetadataRetriever.METADATA_KEY_COMPOSER to "Komposer",
+                            MediaMetadataRetriever.METADATA_KEY_WRITER to "Penulis",
+                            MediaMetadataRetriever.METADATA_KEY_GENRE to "Genre",
+                            MediaMetadataRetriever.METADATA_KEY_YEAR to "Tahun",
+                            MediaMetadataRetriever.METADATA_KEY_CD_TRACK_NUMBER to "Nomor Track",
+                            MediaMetadataRetriever.METADATA_KEY_DISC_NUMBER to "Nomor Disc",
+                            MediaMetadataRetriever.METADATA_KEY_BITRATE to "Bitrate",
+                            MediaMetadataRetriever.METADATA_KEY_MIMETYPE to "Format",
+                            MediaMetadataRetriever.METADATA_KEY_DURATION to "Durasi (ms)"
+                        )
+                        fields.forEach { (key, label) -> retriever.extractMetadata(key)?.let { values[label] = it } }
+                    } catch (_: Exception) {
+                        values["Info"] = "Tag tidak seluruhnya dapat dibaca."
+                    } finally {
+                        try { retriever.release() } catch (_: Exception) {}
+                    }
+                    values.putIfAbsent("Judul", track.title)
+                    values.putIfAbsent("Artis", track.artist)
+                    values.putIfAbsent("Album", track.album)
+                    editableTags.clear()
+                    editableTags.putAll(values)
+                    tagStatus = null
+                    showTagEditor = true
+                },
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = TextPrimary,
@@ -471,6 +515,46 @@ fun NowPlayingScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 color = NeonCyan,
                 fontWeight = FontWeight.SemiBold
+            )
+        }
+
+        if (showTagEditor) {
+            AlertDialog(
+                onDismissRequest = { showTagEditor = false },
+                title = { Text("Tag file lagu") },
+                text = {
+                    Column(modifier = Modifier.height(400.dp)) {
+                        androidx.compose.foundation.lazy.LazyColumn(modifier = Modifier.weight(1f)) {
+                            items(editableTags.keys.toList()) { label ->
+                                OutlinedTextField(
+                                    value = editableTags[label].orEmpty(),
+                                    onValueChange = { editableTags[label] = it },
+                                    label = { Text(label) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    singleLine = true,
+                                    enabled = label in setOf("Judul", "Artis", "Album", "Artis Album", "Komposer", "Penulis", "Genre", "Tahun", "Nomor Track", "Nomor Disc")
+                                )
+                            }
+                        }
+                        tagStatus?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        try {
+                            val values = ContentValues().apply {
+                                put(MediaStore.Audio.Media.TITLE, editableTags["Judul"].orEmpty())
+                                put(MediaStore.Audio.Media.ARTIST, editableTags["Artis"].orEmpty())
+                                put(MediaStore.Audio.Media.ALBUM, editableTags["Album"].orEmpty())
+                            }
+                            val rows = context.contentResolver.update(Uri.parse(track.audioUrl), values, null, null)
+                            tagStatus = if (rows > 0) "Metadata tersimpan melalui MediaStore." else "Gagal menyimpan; file mungkin hanya-baca."
+                        } catch (_: Exception) {
+                            tagStatus = "Android menolak perubahan tag atau file tidak mendukung penulisan."
+                        }
+                    }) { Text("Simpan") }
+                },
+                dismissButton = { TextButton(onClick = { showTagEditor = false }) { Text("Close") } }
             )
         }
 
