@@ -576,9 +576,9 @@ fun NowPlayingScreen(
                     modifier = Modifier
                         .clip(RoundedCornerShape(6.dp))
                         .background(AccentMagenta.copy(alpha = 0.15f))
-                        .padding(horizontal = 8.dp, vertical = 6.dp)
+                    .padding(horizontal = 8.dp, vertical = 6.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                         Icon(
                             imageVector = Icons.Default.Waves,
                             contentDescription = null,
@@ -603,7 +603,7 @@ fun NowPlayingScreen(
                         .background(NeonCyan.copy(alpha = 0.15f))
                         .padding(horizontal = 4.dp, vertical = 6.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                         Icon(
                             imageVector = Icons.Default.SurroundSound,
                             contentDescription = null,
@@ -626,7 +626,7 @@ fun NowPlayingScreen(
                     .clip(RoundedCornerShape(6.dp))
                     .background(AccentAmber.copy(alpha = 0.15f))
                     .clickable { onOpenDsp() }
-                        .padding(horizontal = 8.dp, vertical = 6.dp)
+                    .padding(horizontal = 8.dp, vertical = 6.dp)
             ) {
                 Text(
                     text = "EQ: ${dspSettings.currentPresetName}",
