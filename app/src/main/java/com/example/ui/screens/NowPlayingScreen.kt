@@ -170,6 +170,10 @@ fun NowPlayingScreen(
     )
 
     val context = LocalContext.current
+    // Keep Now Playing labels in sync immediately after a successful physical tag write.
+    var displayTitle by remember(track.id) { mutableStateOf(track.title) }
+    var displayArtist by remember(track.id) { mutableStateOf(track.artist) }
+    var displayAlbum by remember(track.id) { mutableStateOf(track.album) }
     var showTagEditor by remember(track.id) { mutableStateOf(false) }
     var tagStatus by remember(track.id) { mutableStateOf<String?>(null) }
     var pendingTagSave by remember(track.id) { mutableStateOf<Map<String, String>?>(null) }
@@ -179,8 +183,18 @@ fun NowPlayingScreen(
     fun savePhysicalTags(values: Map<String, String>) {
         tagStatus = "Menyimpan tag langsung ke file audio…"
         tagSaveScope.launch {
-            tagStatus = withContext(Dispatchers.IO) {
+            val result = withContext(Dispatchers.IO) {
                 writeTagsToAudioFile(context, Uri.parse(track.audioUrl), values)
+            }
+            tagStatus = result
+            if (result.startsWith("Berhasil menyimpan")) {
+                displayTitle = values["Judul"]?.takeIf { it.isNotBlank() } ?: displayTitle
+                displayArtist = values["Artis"]?.takeIf { it.isNotBlank() } ?: displayArtist
+                displayAlbum = values["Album"]?.takeIf { it.isNotBlank() } ?: displayAlbum
+                // Keep the editor values and visible Now Playing labels synchronized.
+                editableTags["Judul"] = displayTitle
+                editableTags["Artis"] = displayArtist
+                editableTags["Album"] = displayAlbum
             }
         }
     }
