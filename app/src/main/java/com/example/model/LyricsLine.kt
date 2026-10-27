@@ -30,6 +30,15 @@ object LrcParser {
                 }
             }
         }
-        return lines.sortedBy { it.timestampMs }
+        val timestampedLyrics = lines.sortedBy { it.timestampMs }
+        if (timestampedLyrics.isNotEmpty()) return timestampedLyrics
+
+        // MP3 USLT lyric tags are usually plain text rather than LRC timestamped lines.
+        // Spread plain lines across the duration as a readable karaoke-style fallback.
+        return lrcContent.lineSequence()
+            .map { it.trim() }
+            .filter { it.isNotEmpty() && !it.startsWith("[") }
+            .mapIndexed { index, text -> LyricsLine(index * 3000L, text) }
+            .toList()
     }
 }
