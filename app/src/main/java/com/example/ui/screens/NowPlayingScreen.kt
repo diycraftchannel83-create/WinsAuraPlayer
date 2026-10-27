@@ -69,6 +69,7 @@ import com.example.model.DspSettings
 import com.example.model.LrcParser
 import com.example.model.Track
 import com.example.model.VisualizerMode
+import com.example.viewmodel.RepeatMode
 import com.example.ui.components.AudioCoverImage
 import com.example.ui.components.AudioVisualizerView
 import com.example.ui.components.SynchronizedLyricsView
@@ -98,6 +99,8 @@ fun NowPlayingScreen(
     onSeekTo: (Long) -> Unit,
     onNext: () -> Unit,
     onPrevious: () -> Unit,
+    repeatMode: RepeatMode = RepeatMode.OFF,
+    onToggleRepeat: () -> Unit = {},
     onOpenDsp: () -> Unit,
     onShowAd: () -> Unit = {},
     isDarkMode: Boolean = true,
@@ -131,7 +134,6 @@ fun NowPlayingScreen(
 
     var centerMode by remember { mutableStateOf(CenterDisplayMode.ALBUM_ART) }
     var isShuffle by remember { mutableStateOf(false) }
-    var isRepeat by remember { mutableStateOf(false) }
 
     val infiniteTransition = rememberInfiniteTransition(label = "screen_disc_rotation")
     val rotationAngle by infiniteTransition.animateFloat(
@@ -585,7 +587,7 @@ fun NowPlayingScreen(
             }
 
             IconButton(
-                onClick = { isRepeat = !isRepeat },
+                onClick = onToggleRepeat,
                 modifier = Modifier.testTag("screen_repeat_button")
             ) {
                 Icon(
