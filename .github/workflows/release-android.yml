@@ -44,21 +44,35 @@ jobs:
           test -s "$GITHUB_WORKSPACE/my-upload-key.jks"
           echo "KEYSTORE_PATH=$GITHUB_WORKSPACE/my-upload-key.jks" >> "$GITHUB_ENV"
 
-      - name: Configure signing credentials
+      - name: Configure and validate signing credentials
         shell: bash
         env:
           STORE_PASSWORD_SECRET: ${{ secrets.ANDROID_STORE_PASSWORD }}
           KEY_PASSWORD_SECRET: ${{ secrets.ANDROID_KEY_PASSWORD }}
           KEY_ALIAS_SECRET: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: |
-          if [ -z "$STORE_PASSWORD_SECRET" ] || [ -z "$KEY_PASSWORD_SECRET" ] || [ -z "$KEY_ALIAS_SECRET" ]; then
-            echo "::error::Missing one or more signing secrets: ANDROID_STORE_PASSWORD, ANDROID_KEY_PASSWORD, ANDROID_KEY_ALIAS."
+          if [ -z "$STORE_PASSWORD_SECRET" ] || [ -z "$KEY_PASSWORD_SECRET" ]; then
+            echo "::error::Missing signing secrets: ANDROID_STORE_PASSWORD and/or ANDROID_KEY_PASSWORD."
             exit 1
           fi
+
+          # Prefer the configured alias when it exists; otherwise detect the private-key
+          # alias from the uploaded keystore to avoid a stale ANDROID_KEY_ALIAS secret.
+          KEY_ALIAS="$KEY_ALIAS_SECRET"
+          if [ -z "$KEY_ALIAS" ] || ! keytool -list -keystore "$KEYSTORE_PATH" -storepass "$STORE_PASSWORD_SECRET" -alias "$KEY_ALIAS" >/dev/null 2>&1; then
+            KEY_ALIAS="$(keytool -list -v -keystore "$KEYSTORE_PATH" -storepass "$STORE_PASSWORD_SECRET" 2>/dev/null | awk -F': ' '/Alias name:/{alias=$2} /Entry type: PrivateKeyEntry/{print alias; exit}')"
+          fi
+
+          if [ -z "$KEY_ALIAS" ]; then
+            echo "::error::Could not find a private-key alias in the keystore. Check ANDROID_KEYSTORE_BASE64 and ANDROID_STORE_PASSWORD."
+            exit 1
+          fi
+
+          echo "Using the private-key alias detected in the release keystore."
           {
             echo "STORE_PASSWORD=$STORE_PASSWORD_SECRET"
             echo "KEY_PASSWORD=$KEY_PASSWORD_SECRET"
-            echo "KEY_ALIAS=$KEY_ALIAS_SECRET"
+            echo "KEY_ALIAS=$KEY_ALIAS"
           } >> "$GITHUB_ENV"
 
       - name: Build release APK and AAB
