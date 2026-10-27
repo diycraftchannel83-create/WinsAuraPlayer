@@ -2,8 +2,6 @@ package com.example.data
 
 import android.content.ContentUris
 import android.content.Context
-import android.media.MediaMetadataRetriever
-import android.os.Build
 import org.json.JSONArray
 import org.json.JSONObject
 import android.net.Uri
@@ -29,14 +27,6 @@ object MusicCatalog {
         val a = JSONArray()
         tracks.forEach { t -> a.put(JSONObject().apply { put("id",t.id); put("title",t.title); put("artist",t.artist); put("album",t.album); put("durationMs",t.durationMs); put("audioUrl",t.audioUrl); put("coverUrl",t.coverUrl); put("genre",t.genre); put("lyricsLrc",t.lyricsLrc); put("isOnline",t.isOnline) }) }
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().putString(LIBRARY_KEY, a.toString()).apply()
-    }
-
-    private fun embeddedLyrics(context: Context, uri: Uri): String {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return ""
-        val r = MediaMetadataRetriever()
-        return try { r.setDataSource(context, uri); "" }
-        catch (_: Exception) { "" }
-        finally { try { r.release() } catch (_: Exception) { } }
     }
 
     // No bundled online/demo catalog. The library is populated from the user's device only.
@@ -89,7 +79,6 @@ object MusicCatalog {
                         AudioCoverArtHelper.getAlbumArtUriForAlbumId(albumId)
                     } else ""
 
-                    val lyrics = embeddedLyrics(context, contentUri)
                     deviceTracks.add(
                         Track(
                             id = "local_$id",
@@ -102,7 +91,7 @@ object MusicCatalog {
                             genre = "Lokal / Perangkat",
                             isOnline = false,
                             moodTags = listOf("Santai", "Fokus Belajar"),
-                            lyricsLrc = lyrics
+                            lyricsLrc = ""
                         )
                     )
                 }
@@ -112,7 +101,6 @@ object MusicCatalog {
         }
 
         val uniqueTracks = deviceTracks.distinctBy { it.id }
-        saveTracks(context, uniqueTracks)
         return uniqueTracks
     }
 }
