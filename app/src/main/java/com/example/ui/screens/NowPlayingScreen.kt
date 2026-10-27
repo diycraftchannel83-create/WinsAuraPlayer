@@ -1,7 +1,7 @@
 package com.example.ui.screens
 
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.RepeatMode as AnimationRepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -141,7 +141,7 @@ fun NowPlayingScreen(
         targetValue = 360f,
         animationSpec = infiniteRepeatable(
             animation = tween(20000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
+            repeatMode = AnimationRepeatMode.Restart
         ),
         label = "rotation"
     )
