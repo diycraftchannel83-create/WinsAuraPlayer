@@ -141,15 +141,14 @@ fun BottomBannerAd(
     val adWidth = configuration.screenWidthDp.coerceAtLeast(320)
     var adView by remember(context, adWidth) { mutableStateOf<AdView?>(null) }
 
-    // Wait for the Google Mobile Ads SDK initialization before requesting a banner.
+    // Wait for SDK initialization without giving up after an arbitrary timeout.
+    // If initialization finishes late, the banner can still be requested.
     LaunchedEffect(context, adWidth) {
-        var attempts = 0
-        while (!AdMobManager.isInitialized && attempts < 100) {
-            delay(100L)
-            attempts++
+        while (!AdMobManager.isInitialized) {
+            delay(250L)
         }
 
-        if (AdMobManager.isInitialized && adView == null) {
+        if (adView == null) {
             adView = AdView(context).apply {
                 adUnitId = AdMobManager.BANNER_AD_UNIT_ID
                 setAdSize(
