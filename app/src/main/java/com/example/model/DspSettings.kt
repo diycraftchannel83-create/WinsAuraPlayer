@@ -36,6 +36,11 @@ data class DspSettings(
     val isVirtualizerEnabled: Boolean = true, // Dolby 3D Spatializer
     val virtualizerStrength: Int = 850, // 0 - 1000
     val reverbPreset: ReverbPreset = ReverbPreset.MEDIUM_ROOM,
+    val vocalGainDb: Int = 0,
+    val drumGainDb: Int = 2,
+    val bassGainDb: Int = 4,
+    val instrumentGainDb: Int = 0,
+    val effectGainDb: Int = -2,
     val currentPresetName: String = "Studio Master",
     val bands: List<EqualizerBand> = listOf(
         EqualizerBand(0, 31, 300),
