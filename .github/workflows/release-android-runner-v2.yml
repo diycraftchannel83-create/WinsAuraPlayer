@@ -31,14 +31,29 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install required Android SDK packages
+      - name: Configure preinstalled Android SDK
+        shell: bash
         run: |
           set -euo pipefail
-          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager 2>/dev/null | sort -V | tail -n 1)"
+          if [[ -z "$SDKMANAGER" ]]; then
+            echo "::error::Could not find sdkmanager under $SDK_ROOT/cmdline-tools."
+            exit 1
+          fi
+          echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
+          echo "$(dirname "$SDKMANAGER")" >> "$GITHUB_PATH"
+          echo "$SDK_ROOT/platform-tools" >> "$GITHUB_PATH"
+          echo "Using Android SDK at $SDK_ROOT"
+          "$SDKMANAGER" --version
+
+      - name: Install required Android SDK packages
+        shell: bash
+        run: |
+          set -euo pipefail
           yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
 
       - name: Restore signing keystore
         env:
@@ -58,6 +73,7 @@ jobs:
           STORE_PASSWORD_SECRET: ${{ secrets.ANDROID_STORE_PASSWORD }}
           KEY_PASSWORD_SECRET: ${{ secrets.ANDROID_KEY_PASSWORD }}
           KEY_ALIAS_SECRET: ${{ secrets.ANDROID_KEY_ALIAS }}
+        shell: bash
         run: |
           set -euo pipefail
           if [[ -z "${STORE_PASSWORD_SECRET:-}" ]]; then
@@ -103,6 +119,13 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "9.3.1"
+
+      - name: Verify Android and Gradle environment
+        run: |
+          set -euo pipefail
+          java -version
+          gradle --version
+          sdkmanager --list_installed
 
       - name: Build release APK and AAB
         run: |
