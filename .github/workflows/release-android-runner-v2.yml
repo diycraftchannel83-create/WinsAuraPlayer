@@ -55,20 +55,21 @@ jobs:
           yes | sdkmanager --licenses >/dev/null || true
           sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
 
-      - name: Restore signing keystore
+      - name: Restore existing signing keystore
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        shell: bash
         run: |
           set -euo pipefail
           if [[ -z "${KEYSTORE_B64:-}" ]]; then
-            echo "::error::Missing repository secret ANDROID_KEYSTORE_BASE64."
+            echo "::error::Missing repository secret ANDROID_KEYSTORE_BASE64. Keep using the existing release keystore."
             exit 1
           fi
-          printf '%s' "$KEYSTORE_B64" | tr -d '\r\n ' | base64 --decode > "$RUNNER_TEMP/my-upload-key.jks"
-          test -s "$RUNNER_TEMP/my-upload-key.jks"
-          echo "KEYSTORE_PATH=$RUNNER_TEMP/my-upload-key.jks" >> "$GITHUB_ENV"
+          printf '%s' "$KEYSTORE_B64" | tr -d '\r\n ' | base64 --decode > "$RUNNER_TEMP/winsauraplayer-upload-key.jks"
+          test -s "$RUNNER_TEMP/winsauraplayer-upload-key.jks"
+          echo "KEYSTORE_PATH=$RUNNER_TEMP/winsauraplayer-upload-key.jks" >> "$GITHUB_ENV"
 
-      - name: Validate signing credentials and resolve alias
+      - name: Validate existing key and automatically resolve alias
         env:
           STORE_PASSWORD_SECRET: ${{ secrets.ANDROID_STORE_PASSWORD }}
           KEY_PASSWORD_SECRET: ${{ secrets.ANDROID_KEY_PASSWORD }}
@@ -76,17 +77,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -z "${STORE_PASSWORD_SECRET:-}" ]]; then
-            echo "::error::Missing secret ANDROID_STORE_PASSWORD."
-            exit 1
-          fi
-          if [[ -z "${KEY_PASSWORD_SECRET:-}" ]]; then
-            echo "::error::Missing secret ANDROID_KEY_PASSWORD."
-            exit 1
-          fi
+          [[ -n "${STORE_PASSWORD_SECRET:-}" ]] || { echo "::error::Missing ANDROID_STORE_PASSWORD."; exit 1; }
+          [[ -n "${KEY_PASSWORD_SECRET:-}" ]] || { echo "::error::Missing ANDROID_KEY_PASSWORD."; exit 1; }
 
           DETAILS="$(keytool -list -v -keystore "$KEYSTORE_PATH" -storepass "$STORE_PASSWORD_SECRET" 2>&1)" || {
-            echo "::error::Could not open keystore. Verify ANDROID_KEYSTORE_BASE64 and ANDROID_STORE_PASSWORD."
+            echo "::error::Cannot open the existing keystore. Check ANDROID_KEYSTORE_BASE64 and ANDROID_STORE_PASSWORD."
             exit 1
           }
 
@@ -95,16 +90,22 @@ jobs:
             /^Entry type: PrivateKeyEntry/ && alias != "" { print alias; alias="" }
           ')
 
-          KEY_ALIAS="${KEY_ALIAS_SECRET:-}"
-          if [[ -n "$KEY_ALIAS" ]]; then
-            if ! printf '%s\n' "${ALIASES[@]}" | grep -Fxq -- "$KEY_ALIAS"; then
-              echo "::error::ANDROID_KEY_ALIAS does not match a private-key alias in the keystore."
-              exit 1
-            fi
+          if [[ "${#ALIASES[@]}" -eq 0 ]]; then
+            echo "::error::The existing keystore contains no PrivateKeyEntry. A certificate-only keystore cannot sign APK/AAB."
+            exit 1
+          fi
+
+          REQUESTED_ALIAS="${KEY_ALIAS_SECRET:-}"
+          KEY_ALIAS=""
+          if [[ -n "$REQUESTED_ALIAS" ]] && printf '%s\n' "${ALIASES[@]}" | grep -Fxq -- "$REQUESTED_ALIAS"; then
+            KEY_ALIAS="$REQUESTED_ALIAS"
+            echo "Using configured alias found in the existing keystore."
           elif [[ "${#ALIASES[@]}" -eq 1 ]]; then
             KEY_ALIAS="${ALIASES[0]}"
+            echo "::notice::ANDROID_KEY_ALIAS was empty or mismatched; automatically using the only private-key alias present in the existing keystore."
           else
-            echo "::error::Set ANDROID_KEY_ALIAS to a private-key alias in the keystore."
+            echo "::error::The keystore has multiple private-key aliases and ANDROID_KEY_ALIAS does not match any of them. Set ANDROID_KEY_ALIAS to one of these aliases:"
+            printf ' - %s\n' "${ALIASES[@]}"
             exit 1
           fi
 
@@ -113,7 +114,7 @@ jobs:
             echo "KEY_PASSWORD=$KEY_PASSWORD_SECRET"
             echo "KEY_ALIAS=$KEY_ALIAS"
           } >> "$GITHUB_ENV"
-          echo "Signing alias validated."
+          echo "Existing release signing key selected successfully."
 
       - name: Set up Gradle with cache
         uses: gradle/actions/setup-gradle@v4
@@ -127,7 +128,7 @@ jobs:
           gradle --version
           sdkmanager --list_installed
 
-      - name: Build release APK and AAB
+      - name: Build release APK and AAB using the existing key
         run: |
           set -euo pipefail
           gradle --no-daemon --stacktrace clean assembleRelease bundleRelease
