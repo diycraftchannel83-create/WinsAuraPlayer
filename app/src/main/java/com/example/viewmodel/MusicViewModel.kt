@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.ads.AdMobManager
 import com.example.audio.AudioPlayerManager
 import com.example.data.MusicCatalog
+import com.example.data.MusicCatalog
 import com.example.model.DspSettings
 import com.example.model.RepeatMode
 import com.example.model.Track
@@ -94,6 +95,17 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
             _allTracks.value.firstOrNull()?.let(::playTrack)
         } else {
             playerManager.togglePlayPause()
+        }
+    }
+
+
+    fun getLyricsForTrack(track: Track, onResult: (String) -> Unit) {
+        viewModelScope.launch {
+            val lyrics = withContext(Dispatchers.IO) {
+                track.lyricsLrc.takeIf { it.isNotBlank() }
+                    ?: playerManager.readEmbeddedLyrics(track)
+            }
+            onResult(lyrics)
         }
     }
 
