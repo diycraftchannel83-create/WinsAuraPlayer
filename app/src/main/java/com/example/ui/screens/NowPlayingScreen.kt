@@ -173,6 +173,10 @@ fun NowPlayingScreen(
     val parsedLyrics = remember(onlineLyrics) {
         LrcParser.parse(onlineLyrics)
     }
+    val lyricsSyncOffsetMs = remember(track.id) {
+        context.getSharedPreferences("wins_aura_settings", android.content.Context.MODE_PRIVATE)
+            .getInt("lyrics_sync_offset_ms", 0).toLong()
+    }
 
     Box(
         modifier = modifier
@@ -438,7 +442,7 @@ fun NowPlayingScreen(
                         }
                         SynchronizedLyricsView(
                             lyrics = parsedLyrics,
-                            currentPositionMs = currentPositionMs,
+                            currentPositionMs = (currentPositionMs + lyricsSyncOffsetMs).coerceAtLeast(0L),
                             onSeekToTimestamp = onSeekTo,
                             modifier = Modifier
                                 .fillMaxWidth()
