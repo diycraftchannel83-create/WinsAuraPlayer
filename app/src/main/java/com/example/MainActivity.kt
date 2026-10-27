@@ -52,6 +52,7 @@ import com.example.ui.theme.StudioCard
 import com.example.ui.theme.StudioDarkBg
 import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextTertiary
+import com.example.model.RepeatMode
 import com.example.viewmodel.MusicViewModel
 import com.example.viewmodel.NavigationTab
 
@@ -87,6 +88,7 @@ fun MainAppContent(
     val appOpenAdVisible by viewModel.appOpenAdVisible.collectAsStateWithLifecycle()
     val interstitialAdVisible by viewModel.interstitialAdVisible.collectAsStateWithLifecycle()
     val isNowPlayingExpanded by viewModel.isNowPlayingExpanded.collectAsStateWithLifecycle()
+    val repeatMode by viewModel.repeatMode.collectAsStateWithLifecycle()
 
     Box(modifier = Modifier.fillMaxSize().background(androidx.compose.material3.MaterialTheme.colorScheme.background)) {
         Scaffold(
@@ -250,6 +252,8 @@ fun MainAppContent(
                             onSeekTo = { viewModel.seekTo(it) },
                             onNext = { viewModel.playNext() },
                             onPrevious = { viewModel.playPrevious() },
+                            repeatMode = repeatMode,
+                            onCycleRepeatMode = { viewModel.cycleRepeatMode() },
                             onOpenDsp = { viewModel.setActiveTab(NavigationTab.DSP_STUDIO) },
                             onShowAd = { viewModel.showInterstitialAd() },
                             isDarkMode = isDarkMode,
@@ -316,6 +320,8 @@ fun MainAppContent(
                     onSeekTo = { viewModel.seekTo(it) },
                     onNext = { viewModel.playNext() },
                     onPrevious = { viewModel.playPrevious() },
+                    repeatMode = repeatMode,
+                    onCycleRepeatMode = { viewModel.cycleRepeatMode() },
                     onOpenDsp = {
                         viewModel.setNowPlayingExpanded(false)
                         viewModel.setActiveTab(NavigationTab.DSP_STUDIO)
