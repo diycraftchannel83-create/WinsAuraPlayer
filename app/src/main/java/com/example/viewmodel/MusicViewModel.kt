@@ -177,22 +177,35 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     private val _isScanningMedia = MutableStateFlow(false)
     val isScanningMedia: StateFlow<Boolean> = _isScanningMedia.asStateFlow()
 
+    private val _scanMessage = MutableStateFlow<String?>(null)
+    val scanMessage: StateFlow<String?> = _scanMessage.asStateFlow()
+
+    fun reportScanPermissionDenied() {
+        _scanMessage.value = "Izin akses audio ditolak. Izinkan akses audio di pengaturan aplikasi, lalu coba pindai lagi."
+    }
+
     fun scanDeviceAudio() {
         if (_isScanningMedia.value) return
         viewModelScope.launch {
             _isScanningMedia.value = true
+            _scanMessage.value = "Sedang memindai file audio…"
             try {
                 val app = getApplication<Application>()
-                // MediaStore queries and SharedPreferences serialization must not run on the UI thread.
+                // Commit the new library only after both scanning and persistence succeed.
                 val uniqueTracks = withContext(Dispatchers.IO) {
-                    MusicCatalog.scanLocalDeviceAudio(app).distinctBy { it.id }
+                    MusicCatalog.scanLocalDeviceAudio(app).distinctBy { it.id }.also { scanned ->
+                        MusicCatalog.saveTracks(app, scanned)
+                    }
                 }
                 _allTracks.value = uniqueTracks
-                withContext(Dispatchers.IO) {
-                    MusicCatalog.saveTracks(app, uniqueTracks)
+                _scanMessage.value = if (uniqueTracks.isEmpty()) {
+                    "Pemindaian selesai, tetapi tidak ada file audio yang ditemukan. Periksa lokasi file dan izin akses audio."
+                } else {
+                    "Pemindaian selesai: ${uniqueTracks.size} lagu ditemukan."
                 }
             } catch (e: Exception) {
-                Log.e("WinsAuraPlayer", "Media library scan failed", e)
+                Log.e("WinsAuraPlayer", "Media library scan failed; preserving previous library", e)
+                _scanMessage.value = "Pemindaian gagal. Pustaka sebelumnya dipertahankan. Periksa izin dan coba lagi."
             } finally {
                 _isScanningMedia.value = false
             }
