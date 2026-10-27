@@ -213,6 +213,32 @@ fun NowPlayingScreen(
     var onlineLyrics by remember(track.id) { mutableStateOf(track.lyricsLrc) }
     var isLoadingLyrics by remember(track.id) { mutableStateOf(false) }
     var lyricsRetryCount by remember(track.id) { mutableStateOf(0) }
+    val lrcBrowseScope = androidx.compose.runtime.rememberCoroutineScope()
+    val browseLrcLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { selectedUri ->
+        if (selectedUri != null) {
+            lrcBrowseScope.launch {
+                isLoadingLyrics = true
+                val loadedLrc = withContext(Dispatchers.IO) {
+                    try {
+                        context.contentResolver.openInputStream(selectedUri)
+                            ?.bufferedReader(Charsets.UTF_8)
+                            ?.use { it.readText() }
+                    } catch (_: Exception) {
+                        null
+                    }
+                }
+                if (!loadedLrc.isNullOrBlank()) {
+                    onlineLyrics = loadedLrc
+                    centerMode = CenterDisplayMode.LYRICS
+                } else {
+                    tagStatus = "File LRC tidak dapat dibaca atau kosong."
+                }
+                isLoadingLyrics = false
+            }
+        }
+    }
 
     LaunchedEffect(track.id, lyricsRetryCount) {
         if (track.lyricsLrc.isNotBlank()) {
@@ -488,12 +514,19 @@ fun NowPlayingScreen(
                                     color = TextSecondary,
                                     fontSize = 12.sp
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
                                 Button(
                                     onClick = { lyricsRetryCount++ },
                                     modifier = Modifier.testTag("retry_online_lyrics_button")
                                 ) {
-                                    Text("Cari lagi")
+                                    Text("Cari lagi", maxLines = 1)
+                                }
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Button(
+                                    onClick = { browseLrcLauncher.launch(arrayOf("text/*", "application/octet-stream")) },
+                                    modifier = Modifier.testTag("browse_lrc_button")
+                                ) {
+                                    Text("Browse LRC", maxLines = 1)
                                 }
                             }
                         }
