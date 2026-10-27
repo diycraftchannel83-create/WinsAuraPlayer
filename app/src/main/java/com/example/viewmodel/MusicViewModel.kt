@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.ads.AdMobManager
 import com.example.audio.AudioPlayerManager
+import com.example.data.Mp3LyricsReader
 import com.example.data.MusicCatalog
 import com.example.model.DspSettings
 import com.example.model.RepeatMode
@@ -70,7 +71,7 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
         AdMobManager.initialize(application)
         playerManager.onTrackCompleted = {
             when (_repeatMode.value) {
-                RepeatMode.ONE -> currentTrack.value?.let(::playTrack)
+                RepeatMode.ONE -> currentTrack.value?.let(playerManager::playTrack)
                 RepeatMode.ALL -> playNext()
                 RepeatMode.OFF -> {
                     val tracks = _allTracks.value
@@ -102,7 +103,7 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val lyrics = withContext(Dispatchers.IO) {
                 track.lyricsLrc.takeIf { it.isNotBlank() }
-                    ?: playerManager.readEmbeddedLyrics(track)
+                    ?: Mp3LyricsReader.readLyrics(getApplication(), track.audioUrl)
             }
             onResult(lyrics)
         }
