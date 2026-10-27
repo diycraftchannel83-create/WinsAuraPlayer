@@ -96,7 +96,6 @@ object Mp3LyricsReader {
         if (descriptionStart > end) return ""
 
         if (encoding !in 0..3) return ""
-        if (encoding !in 0..3) return ""
         val terminatorWidth = if (encoding == 1 || encoding == 2) 2 else 1
         val textStart = findTextStart(tag, descriptionStart, end, terminatorWidth)
         if (textStart > end) return ""
