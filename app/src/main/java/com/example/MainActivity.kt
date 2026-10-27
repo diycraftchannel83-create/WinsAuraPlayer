@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.PlayCircle
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -56,6 +57,7 @@ import com.example.ui.screens.DspEqualizerScreen
 import com.example.ui.screens.LibraryScreen
 import com.example.ui.screens.NowPlayingModal
 import com.example.ui.screens.NowPlayingScreen
+import com.example.ui.screens.SettingsScreen
 import com.example.ui.theme.AuraSoundTheme
 import com.example.ui.theme.NeonCyan
 import com.example.ui.theme.StudioCard
@@ -255,6 +257,33 @@ fun MainAppContent(
                             ),
                             modifier = Modifier.testTag("tab_ai_playlist")
                         )
+
+                        // 5. Settings
+                        NavigationBarItem(
+                            selected = activeTab == NavigationTab.SETTINGS,
+                            onClick = { viewModel.setActiveTab(NavigationTab.SETTINGS) },
+                            icon = {
+                                Icon(
+                                    imageVector = Icons.Default.Settings,
+                                    contentDescription = "Pengaturan"
+                                )
+                            },
+                            label = {
+                                Text(
+                                    text = "Settings",
+                                    fontSize = 11.sp,
+                                    fontWeight = if (activeTab == NavigationTab.SETTINGS) FontWeight.Bold else FontWeight.Normal
+                                )
+                            },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = androidx.compose.material3.MaterialTheme.colorScheme.surface,
+                                selectedTextColor = NeonCyan,
+                                indicatorColor = NeonCyan,
+                                unselectedIconColor = TextTertiary,
+                                unselectedTextColor = TextTertiary
+                            ),
+                            modifier = Modifier.testTag("tab_settings")
+                        )
                     }
                 }
             },
@@ -325,6 +354,13 @@ fun MainAppContent(
                                 viewModel.applyEqPreset(presetName)
                                 viewModel.setActiveTab(NavigationTab.DSP_STUDIO)
                             }
+                        )
+                    }
+
+                    NavigationTab.SETTINGS -> {
+                        SettingsScreen(
+                            tracks = allTracks,
+                            onUpdateTrack = { viewModel.updateTrackMetadata(it) }
                         )
                     }
                 }
