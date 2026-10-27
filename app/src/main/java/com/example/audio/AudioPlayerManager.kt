@@ -29,6 +29,7 @@ class AudioPlayerManager(private val context: Context) {
 
     private val TAG = "AudioPlayerManager"
     private var mediaPlayer: MediaPlayer? = null
+    private var playerPrepared = false
 
     // Audio effects
     private var equalizer: Equalizer? = null
@@ -70,10 +71,12 @@ class AudioPlayerManager(private val context: Context) {
 
     fun playTrack(track: Track) {
         try {
-            _isBuffering.value = true
-            _currentTrack.value = track
-
             releasePlayerOnly()
+            _currentTrack.value = track
+            _isBuffering.value = true
+            _isPlaying.value = false
+            _currentPositionMs.value = 0L
+            _durationMs.value = 0L
 
             val player = MediaPlayer().apply {
                 setAudioAttributes(
@@ -90,9 +93,15 @@ class AudioPlayerManager(private val context: Context) {
 
                 setOnPreparedListener { mp ->
                     _isBuffering.value = false
-                    _durationMs.value = mp.duration.toLong()
-                    mp.start()
-                    _isPlaying.value = true
+                    playerPrepared = true
+                    _durationMs.value = mp.duration.coerceAtLeast(0).toLong()
+                    try {
+                        mp.start()
+                        _isPlaying.value = true
+                    } catch (e: IllegalStateException) {
+                        Log.e(TAG, "Unable to start prepared player", e)
+                        _isPlaying.value = false
+                    }
                     attachAudioEffects(mp.audioSessionId)
                     attachVisualizer(mp.audioSessionId)
                 }
@@ -107,6 +116,10 @@ class AudioPlayerManager(private val context: Context) {
                     Log.e(TAG, "MediaPlayer error: what=$what extra=$extra")
                     _isBuffering.value = false
                     _isPlaying.value = false
+                    playerPrepared = false
+                    _currentPositionMs.value = 0L
+                    releaseVisualizer()
+                    releaseEffects()
                     true
                 }
 
@@ -116,22 +129,36 @@ class AudioPlayerManager(private val context: Context) {
         } catch (e: Exception) {
             Log.e(TAG, "Error playing track", e)
             _isBuffering.value = false
+            _isPlaying.value = false
+            playerPrepared = false
+            releasePlayerOnly()
         }
     }
 
     fun pause() {
-        mediaPlayer?.let {
-            if (it.isPlaying) {
-                it.pause()
+        val player = mediaPlayer ?: return
+        if (!playerPrepared) return
+        try {
+            if (player.isPlaying) {
+                player.pause()
                 _isPlaying.value = false
             }
+        } catch (e: IllegalStateException) {
+            Log.w(TAG, "Pause ignored because player is not ready", e)
         }
     }
 
     fun resume() {
-        mediaPlayer?.let {
-            it.start()
-            _isPlaying.value = true
+        val player = mediaPlayer ?: return
+        if (!playerPrepared || _isBuffering.value) return
+        try {
+            if (!player.isPlaying) {
+                player.start()
+                _isPlaying.value = true
+            }
+        } catch (e: IllegalStateException) {
+            Log.w(TAG, "Resume ignored because player is not ready", e)
+            _isPlaying.value = false
         }
     }
 
@@ -144,9 +171,14 @@ class AudioPlayerManager(private val context: Context) {
     }
 
     fun seekTo(positionMs: Long) {
-        mediaPlayer?.let {
-            it.seekTo(positionMs.toInt())
-            _currentPositionMs.value = positionMs
+        val player = mediaPlayer ?: return
+        if (!playerPrepared) return
+        val safePosition = positionMs.coerceIn(0L, _durationMs.value.coerceAtLeast(0L))
+        try {
+            player.seekTo(safePosition.toInt())
+            _currentPositionMs.value = safePosition
+        } catch (e: IllegalStateException) {
+            Log.w(TAG, "Seek ignored because player is not ready", e)
         }
     }
 
@@ -363,6 +395,9 @@ class AudioPlayerManager(private val context: Context) {
     }
 
     private fun releasePlayerOnly() {
+        playerPrepared = false
+        _isPlaying.value = false
+        _isBuffering.value = false
         releaseVisualizer()
         try {
             mediaPlayer?.stop()
