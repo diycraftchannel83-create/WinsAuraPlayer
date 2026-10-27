@@ -67,12 +67,6 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
         // Initialize AdMob SDK
         AdMobManager.initialize(application)
 
-        // Pre-select first track for immediate playback readiness
-        val firstTrack = MusicCatalog.STUDIO_TRACKS.firstOrNull()
-        if (firstTrack != null) {
-            // We can prepare track without loud auto-start
-        }
-
         playerManager.onTrackCompleted = {
             playNext()
         }
@@ -164,10 +158,7 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     fun scanDeviceAudio() {
         viewModelScope.launch {
             val localTracks = MusicCatalog.scanLocalDeviceAudio(getApplication())
-            if (localTracks.isNotEmpty()) {
-                val combined = (MusicCatalog.getAllInitialTracks() + localTracks).distinctBy { it.id }
-                _allTracks.value = combined
-            }
+            _allTracks.value = localTracks.distinctBy { it.id }
         }
     }
 
