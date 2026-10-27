@@ -291,7 +291,7 @@ fun NowPlayingScreen(
                     letterSpacing = 1.sp
                 )
                 Text(
-                    text = track.album,
+                    text = displayAlbum,
                     fontSize = 13.sp,
                     color = TextSecondary,
                     maxLines = 1,
@@ -552,7 +552,7 @@ fun NowPlayingScreen(
                 }
         ) {
             Text(
-                text = track.title,
+                text = displayTitle,
                 modifier = Modifier.fillMaxWidth(),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
@@ -562,7 +562,7 @@ fun NowPlayingScreen(
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = track.artist,
+                text = displayArtist,
                 style = MaterialTheme.typography.bodyMedium,
                 color = NeonCyan,
                 fontWeight = FontWeight.SemiBold
