@@ -73,7 +73,6 @@ import coil.compose.AsyncImage
 import com.example.model.DspSettings
 import com.example.model.LrcParser
 import com.example.model.RepeatMode
-import com.example.model.RepeatMode
 import com.example.model.Track
 import com.example.model.VisualizerMode
 import com.example.ui.components.AudioCoverImage
