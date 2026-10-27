@@ -590,15 +590,20 @@ fun NowPlayingModal(
                     onClick = onCycleRepeatMode,
                     modifier = Modifier.testTag("repeat_button")
                 ) {
-                    Icon(
-                        imageVector = if (repeatMode == RepeatMode.ONE) Icons.Default.RepeatOne else Icons.Default.Repeat,
-                        contentDescription = when (repeatMode) {
-                            RepeatMode.OFF -> "Repeat mati"
-                            RepeatMode.ONE -> "Repeat One aktif"
-                            RepeatMode.ALL -> "Repeat All aktif"
-                        },
-                        tint = if (repeatMode != RepeatMode.OFF) NeonCyan else TextTertiary
-                    )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = if (repeatMode == RepeatMode.ONE) Icons.Default.RepeatOne else Icons.Default.Repeat,
+                            contentDescription = when (repeatMode) {
+                                RepeatMode.OFF -> "Repeat mati"
+                                RepeatMode.ONE -> "Repeat One aktif"
+                                RepeatMode.ALL -> "Repeat All aktif"
+                            },
+                            tint = if (repeatMode != RepeatMode.OFF) NeonCyan else TextTertiary
+                        )
+                        if (repeatMode == RepeatMode.ALL) {
+                            Text("ALL", fontSize = 8.sp, color = NeonCyan, fontWeight = FontWeight.Bold)
+                        }
+                    }
                 }
             }
 
