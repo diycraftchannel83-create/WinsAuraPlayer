@@ -372,16 +372,15 @@ fun DspEqualizerScreen(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Compact 10-band vertical faders: swipe up to boost, down to cut.
+                // Fit all ten vertical faders on portrait screens; drag up to boost and down to cut.
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.Bottom
                 ) {
                     dspSettings.bands.forEachIndexed { idx, band ->
                         BandColumn(
+                            modifier = Modifier.weight(1f),
                             band = band,
                             enabled = dspSettings.isEnabled,
                             onLevelChange = { newLevel ->
@@ -459,13 +458,13 @@ fun DspEqualizerScreen(
 
 @Composable
 private fun BandColumn(
+    modifier: Modifier = Modifier,
     band: EqualizerBand,
     enabled: Boolean,
     onLevelChange: (Int) -> Unit
 ) {
     Column(
-        modifier = Modifier
-            .width(30.dp)
+        modifier = modifier
             .testTag("equalizer_band_${band.index}"),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -476,21 +475,21 @@ private fun BandColumn(
             fontWeight = FontWeight.Bold,
             maxLines = 1
         )
-        Spacer(modifier = Modifier.height(5.dp))
+        Spacer(modifier = Modifier.height(2.dp))
         VerticalBandSlider(
             value = band.levelMb,
             enabled = enabled,
             onValueChange = onLevelChange,
             modifier = Modifier
-                .width(28.dp)
-                .height(112.dp)
+                .fillMaxWidth()
+                .height(82.dp)
                 .testTag("band_slider_${band.index}")
         )
-        Spacer(modifier = Modifier.height(5.dp))
+        Spacer(modifier = Modifier.height(2.dp))
         Text(
             text = band.formattedFreq(),
             color = NeonCyan,
-            fontSize = 9.sp,
+            fontSize = 8.sp,
             fontWeight = FontWeight.SemiBold,
             maxLines = 1
         )
