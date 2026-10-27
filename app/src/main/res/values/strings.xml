@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">AuraSound DSP</string>
+    <string name="app_name">WinsAuraPlayer</string>
     <string name="tab_now_playing">Pemutar</string>
     <string name="tab_library">Pustaka</string>
     <string name="tab_ai_playlist">AI Playlist</string>
