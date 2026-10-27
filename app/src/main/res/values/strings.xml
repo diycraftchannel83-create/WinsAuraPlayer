@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">AuraSound DSP</string>
+    <string name="tab_library">Pustaka</string>
+    <string name="tab_wins_online">Koleksi Wins</string>
+    <string name="tab_ai_playlist">AI Playlist</string>
+    <string name="tab_dsp_equalizer">Audio FX</string>
+    <string name="now_playing">Sedang Memutar</string>
+    <string name="lyrics">Lirik Lagu</string>
+    <string name="visualizer">Visualizer</string>
+</resources>

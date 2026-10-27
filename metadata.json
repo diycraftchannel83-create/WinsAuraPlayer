@@ -1,0 +1,6 @@
+{
+  "name": "AuraSound DSP",
+  "description": "Pemutar audio studio dengan 10-Band EQ, Bass Booster, Dolby 3D Surround, visualizer neon dinamis, katalog artis Wins, AI playlist pintar, dan lirik tersinkronisasi.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
