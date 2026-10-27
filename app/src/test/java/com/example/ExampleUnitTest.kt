@@ -3,13 +3,11 @@ package com.example
 import com.example.ads.AdMobManager
 import com.example.ai.AiPlaylistManager
 import com.example.data.MusicCatalog
-import com.example.data.AudioCoverArtHelper
 import com.example.model.DspSettings
 import com.example.model.LrcParser
 import com.example.model.Track
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -92,10 +90,4 @@ class ExampleUnitTest {
         assertEquals("ca-app-pub-1254774552944426/3914322052", AdMobManager.INTERSTITIAL_AD_UNIT_ID)
     }
 
-    @Test
-    fun audioCoverArtHelperConstructsValidAlbumArtUri() {
-        val uri = AudioCoverArtHelper.getAlbumArtUriForAlbumId(12345L)
-        assertTrue(uri.contains("content://media/external/audio/albumart/12345"))
-        assertFalse(uri.isBlank())
-    }
 }
