@@ -233,21 +233,58 @@ class AudioPlayerManager(private val context: Context) {
         }
     }
 
+    private fun interpolateEqLevel(bands: List<com.example.model.EqualizerBand>, frequencyHz: Double): Int {
+        if (bands.isEmpty()) return 0
+        val sorted = bands.sortedBy { it.centerFreqHz }
+        if (frequencyHz <= sorted.first().centerFreqHz) return sorted.first().levelMb
+        if (frequencyHz >= sorted.last().centerFreqHz) return sorted.last().levelMb
+
+        for (index in 0 until sorted.lastIndex) {
+            val lower = sorted[index]
+            val upper = sorted[index + 1]
+            if (frequencyHz in lower.centerFreqHz.toDouble()..upper.centerFreqHz.toDouble()) {
+                val lowerLog = kotlin.math.ln(lower.centerFreqHz.toDouble())
+                val upperLog = kotlin.math.ln(upper.centerFreqHz.toDouble())
+                val targetLog = kotlin.math.ln(frequencyHz)
+                val fraction = ((targetLog - lowerLog) / (upperLog - lowerLog)).coerceIn(0.0, 1.0)
+                return (lower.levelMb + (upper.levelMb - lower.levelMb) * fraction).toInt()
+            }
+        }
+        return 0
+    }
+
+    // Broad, overlapping frequency regions approximate tonal shaping; they do not
+    // isolate vocals, drums, bass, or other stems from a mixed recording.
+    private fun frequencyWeight(frequencyHz: Double, centerHz: Double, widthOctaves: Double): Double {
+        val octaves = kotlin.math.ln(frequencyHz / centerHz) / kotlin.math.ln(2.0)
+        return kotlin.math.exp(-0.5 * (octaves / widthOctaves) * (octaves / widthOctaves))
+    }
+
     fun applyDspSettings(settings: DspSettings) {
         currentDspSettings = settings
         try {
-            // Apply EQ
+            // Map the app's ten frequency controls onto the actual hardware EQ bands.
+            // Android devices expose different band counts and center frequencies.
             equalizer?.let { eq ->
                 eq.enabled = settings.isEnabled
                 val numBands = eq.numberOfBands.toInt()
-                val minLevel = eq.bandLevelRange[0]
-                val maxLevel = eq.bandLevelRange[1]
+                val minLevel = eq.bandLevelRange[0].toInt()
+                val maxLevel = eq.bandLevelRange[1].toInt()
 
-                settings.bands.forEachIndexed { idx, band ->
-                    if (idx < numBands) {
-                        val clamped = band.levelMb.coerceIn(minLevel.toInt(), maxLevel.toInt()).toShort()
-                        eq.setBandLevel(idx.toShort(), clamped)
-                    }
+                for (hardwareIndex in 0 until numBands) {
+                    val frequencyHz = (eq.getCenterFreq(hardwareIndex.toShort()).toDouble() / 1000.0)
+                        .coerceAtLeast(1.0)
+                    val baseLevelMb = interpolateEqLevel(settings.bands, frequencyHz)
+                    val mixerLevelMb =
+                        settings.bassGainDb * 100.0 * frequencyWeight(frequencyHz, 80.0, 1.45) +
+                        settings.drumGainDb * 100.0 * frequencyWeight(frequencyHz, 150.0, 1.35) +
+                        settings.vocalGainDb * 100.0 * frequencyWeight(frequencyHz, 1800.0, 1.45) +
+                        settings.instrumentGainDb * 100.0 * frequencyWeight(frequencyHz, 900.0, 1.8) +
+                        settings.effectGainDb * 100.0 * frequencyWeight(frequencyHz, 9000.0, 1.35)
+
+                    val clamped = (baseLevelMb + mixerLevelMb.toInt())
+                        .coerceIn(minLevel, maxLevel).toShort()
+                    eq.setBandLevel(hardwareIndex.toShort(), clamped)
                 }
             }
 
