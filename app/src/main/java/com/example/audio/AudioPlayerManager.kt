@@ -76,6 +76,7 @@ class AudioPlayerManager(private val context: Context) {
             _isBuffering.value = true
             _currentTrack.value = track
 
+            releaseStemsOnly()
             releasePlayerOnly()
 
             val player = MediaPlayer().apply {
@@ -184,15 +185,19 @@ class AudioPlayerManager(private val context: Context) {
         }
     }
 
+    private fun channelGainDb(channel: Int): Int = when (channel) {
+        0 -> currentDspSettings.vocalGainDb
+        1 -> currentDspSettings.drumGainDb
+        2 -> currentDspSettings.bassGainDb
+        3 -> currentDspSettings.instrumentGainDb
+        else -> currentDspSettings.effectGainDb
+    }.coerceIn(-12, 12)
+
     private fun stemVolume(channel: Int): Float {
-        val db = when (channel) {
-            0 -> currentDspSettings.vocalGainDb
-            1 -> currentDspSettings.drumGainDb
-            2 -> currentDspSettings.bassGainDb
-            3 -> currentDspSettings.instrumentGainDb
-            else -> currentDspSettings.effectGainDb
-        }.coerceIn(-12, 12)
-        return Math.pow(10.0, db / 20.0).toFloat().coerceIn(0f, 1f)
+        // MediaPlayer volume is limited to 0..1. Normalize positive gains against the
+        // loudest loaded stem so faders change relative balance without clipping.
+        val highestGain = stemPlayers.keys.maxOfOrNull { channelGainDb(it) }?.coerceAtLeast(0) ?: 0
+        return Math.pow(10.0, (channelGainDb(channel) - highestGain) / 20.0).toFloat().coerceIn(0f, 1f)
     }
 
     private fun applyStemVolumes() {
@@ -412,6 +417,16 @@ class AudioPlayerManager(private val context: Context) {
         }
     }
 
+    private fun releaseStemsOnly() {
+        stemPlayers.values.forEach { player ->
+            try { player.stop() } catch (_: Exception) { }
+            try { player.release() } catch (_: Exception) { }
+        }
+        stemPlayers.clear()
+        _stemNames.value = List(5) { null }
+        stemMode = false
+    }
+
     private fun releasePlayerOnly() {
         try {
             mediaPlayer?.stop()
@@ -426,8 +441,7 @@ class AudioPlayerManager(private val context: Context) {
     fun release() {
         progressJob?.cancel()
         releaseEffects()
-        stemPlayers.values.forEach { try { it.release() } catch (_: Exception) { } }
-        stemPlayers.clear()
+        releaseStemsOnly()
         releasePlayerOnly()
     }
 }
