@@ -9,6 +9,7 @@ import android.media.audiofx.Equalizer
 import android.media.audiofx.PresetReverb
 import android.media.audiofx.Virtualizer
 import android.net.Uri
+import android.content.Intent
 import android.util.Log
 import com.example.model.DspSettings
 import com.example.model.Track
@@ -27,6 +28,11 @@ class AudioPlayerManager(private val context: Context) {
 
     private val TAG = "AudioPlayerManager"
     private var mediaPlayer: MediaPlayer? = null
+    private val stemPlayers = mutableMapOf<Int, MediaPlayer>()
+    private var stemMode = false
+    private val stemLabels = listOf("Vokal", "Drum", "Bass", "Instrumen", "Efek")
+    private val _stemNames = MutableStateFlow<List<String?>>(List(5) { null })
+    val stemNames: StateFlow<List<String?>> = _stemNames.asStateFlow()
 
     // Audio effects
     private var equalizer: Equalizer? = null
@@ -115,7 +121,95 @@ class AudioPlayerManager(private val context: Context) {
         }
     }
 
+    fun loadStem(channel: Int, uri: Uri) {
+        if (channel !in 0..4) return
+        try {
+            context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        } catch (_: Exception) { }
+        val shouldPlay = _isPlaying.value
+        if (!stemMode) {
+            stemMode = true
+            try { mediaPlayer?.pause() } catch (_: Exception) { }
+        }
+        try { stemPlayers.remove(channel)?.release() } catch (_: Exception) { }
+        val player = MediaPlayer()
+        stemPlayers[channel] = player
+        try {
+            player.setAudioAttributes(
+                AudioAttributes.Builder().setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                    .setUsage(AudioAttributes.USAGE_MEDIA).build()
+            )
+            player.setDataSource(context, uri)
+            player.setOnPreparedListener { prepared ->
+                prepared.setVolume(stemVolume(channel), stemVolume(channel))
+                prepared.seekTo(_currentPositionMs.value.coerceAtLeast(0L).toInt())
+                if (shouldPlay || _isPlaying.value) {
+                    try { prepared.start() } catch (e: Exception) { Log.w(TAG, "Stem start failed", e) }
+                }
+                val labels = _stemNames.value.toMutableList()
+                labels[channel] = stemLabels[channel] + " dimuat"
+                _stemNames.value = labels
+                if (prepared.duration > 0) _durationMs.value = prepared.duration.toLong()
+                _isBuffering.value = false
+            }
+            player.setOnErrorListener { _, what, extra ->
+                Log.e(TAG, "Stem error channel=$channel what=$what extra=$extra")
+                val labels = _stemNames.value.toMutableList()
+                labels[channel] = null
+                _stemNames.value = labels
+                true
+            }
+            _isBuffering.value = true
+            player.prepareAsync()
+        } catch (e: Exception) {
+            Log.e(TAG, "Unable to load stem " + stemLabels[channel], e)
+            try { player.release() } catch (_: Exception) { }
+            stemPlayers.remove(channel)
+            _isBuffering.value = false
+        }
+    }
+
+    fun clearStems() {
+        stemPlayers.values.forEach { player ->
+            try { player.stop() } catch (_: Exception) { }
+            try { player.release() } catch (_: Exception) { }
+        }
+        stemPlayers.clear()
+        _stemNames.value = List(5) { null }
+        stemMode = false
+        _isPlaying.value = false
+        mediaPlayer?.let { player ->
+            try { player.seekTo(_currentPositionMs.value.toInt()); player.start(); _isPlaying.value = true }
+            catch (_: Exception) { }
+        }
+    }
+
+    private fun stemVolume(channel: Int): Float {
+        val db = when (channel) {
+            0 -> currentDspSettings.vocalGainDb
+            1 -> currentDspSettings.drumGainDb
+            2 -> currentDspSettings.bassGainDb
+            3 -> currentDspSettings.instrumentGainDb
+            else -> currentDspSettings.effectGainDb
+        }.coerceIn(-12, 12)
+        return Math.pow(10.0, db / 20.0).toFloat().coerceIn(0f, 1f)
+    }
+
+    private fun applyStemVolumes() {
+        stemPlayers.forEach { (channel, player) ->
+            try {
+                val volume = stemVolume(channel)
+                player.setVolume(volume, volume)
+            } catch (e: Exception) { Log.w(TAG, "Stem volume update failed", e) }
+        }
+    }
+
     fun pause() {
+        if (stemMode) {
+            stemPlayers.values.forEach { try { if (it.isPlaying) it.pause() } catch (_: Exception) { } }
+            _isPlaying.value = false
+            return
+        }
         mediaPlayer?.let {
             if (it.isPlaying) {
                 it.pause()
@@ -125,6 +219,14 @@ class AudioPlayerManager(private val context: Context) {
     }
 
     fun resume() {
+        if (stemMode) {
+            var started = false
+            stemPlayers.values.forEach { player ->
+                try { player.start(); started = true } catch (_: Exception) { }
+            }
+            _isPlaying.value = started
+            return
+        }
         mediaPlayer?.let {
             it.start()
             _isPlaying.value = true
@@ -140,6 +242,11 @@ class AudioPlayerManager(private val context: Context) {
     }
 
     fun seekTo(positionMs: Long) {
+        if (stemMode) {
+            stemPlayers.values.forEach { player -> try { player.seekTo(positionMs.toInt()) } catch (_: Exception) { } }
+            _currentPositionMs.value = positionMs
+            return
+        }
         mediaPlayer?.let {
             it.seekTo(positionMs.toInt())
             _currentPositionMs.value = positionMs
@@ -199,6 +306,7 @@ class AudioPlayerManager(private val context: Context) {
 
     fun applyDspSettings(settings: DspSettings) {
         currentDspSettings = settings
+        applyStemVolumes()
         try {
             // Apply EQ
             equalizer?.let { eq ->
@@ -248,9 +356,11 @@ class AudioPlayerManager(private val context: Context) {
         progressJob?.cancel()
         progressJob = coroutineScope.launch {
             while (isActive) {
-                if (_isPlaying.value && mediaPlayer != null) {
+                if (_isPlaying.value && (stemMode || mediaPlayer != null)) {
                     try {
-                        val pos = mediaPlayer?.currentPosition?.toLong() ?: 0L
+                        val pos = if (stemMode) {
+                            stemPlayers.values.firstOrNull()?.let { it.currentPosition.toLong() } ?: _currentPositionMs.value
+                        } else mediaPlayer?.currentPosition?.toLong() ?: 0L
                         _currentPositionMs.value = pos
 
                         // Synthesize 32-band responsive audio visualizer spectrum
@@ -316,6 +426,8 @@ class AudioPlayerManager(private val context: Context) {
     fun release() {
         progressJob?.cancel()
         releaseEffects()
+        stemPlayers.values.forEach { try { it.release() } catch (_: Exception) { } }
+        stemPlayers.clear()
         releasePlayerOnly()
     }
 }
