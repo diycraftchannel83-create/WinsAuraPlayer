@@ -79,6 +79,7 @@ fun MainAppContent(
     val activeTab by viewModel.activeTab.collectAsStateWithLifecycle()
     val currentTrack by viewModel.currentTrack.collectAsStateWithLifecycle()
     val isPlaying by viewModel.isPlaying.collectAsStateWithLifecycle()
+    val repeatMode by viewModel.repeatMode.collectAsStateWithLifecycle()
     val currentPositionMs by viewModel.currentPositionMs.collectAsStateWithLifecycle()
     val durationMs by viewModel.durationMs.collectAsStateWithLifecycle()
     val amplitudes by viewModel.amplitudes.collectAsStateWithLifecycle()
@@ -250,6 +251,8 @@ fun MainAppContent(
                             onSeekTo = { viewModel.seekTo(it) },
                             onNext = { viewModel.playNext() },
                             onPrevious = { viewModel.playPrevious() },
+                            repeatMode = repeatMode,
+                            onToggleRepeat = { viewModel.cycleRepeatMode() },
                             onOpenDsp = { viewModel.setActiveTab(NavigationTab.DSP_STUDIO) },
                             onShowAd = { viewModel.showInterstitialAd() },
                             isDarkMode = isDarkMode,
@@ -316,6 +319,8 @@ fun MainAppContent(
                     onSeekTo = { viewModel.seekTo(it) },
                     onNext = { viewModel.playNext() },
                     onPrevious = { viewModel.playPrevious() },
+                    repeatMode = repeatMode,
+                    onToggleRepeat = { viewModel.cycleRepeatMode() },
                     onOpenDsp = {
                         viewModel.setNowPlayingExpanded(false)
                         viewModel.setActiveTab(NavigationTab.DSP_STUDIO)
