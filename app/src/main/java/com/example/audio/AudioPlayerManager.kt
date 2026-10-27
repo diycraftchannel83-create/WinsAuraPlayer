@@ -306,7 +306,7 @@ class AudioPlayerManager(private val context: Context) {
                                 }
                                 val magnitude = if (count > 0) energy / count else 0.0
                                 // Compress dynamic range and clamp for stable, readable bars.
-                                bands[i] = (sqrt(magnitude / 128.0) * 1.8).toFloat().coerceIn(0.025f, 1f)
+                                bands[i] = (sqrt(magnitude / 128.0) * 3.0).toFloat().coerceIn(0.025f, 1f)
                             }
                             val previous = _amplitudes.value
                             _amplitudes.value = FloatArray(32) { i ->
@@ -327,6 +327,11 @@ class AudioPlayerManager(private val context: Context) {
             releaseVisualizer()
             _amplitudes.value = FloatArray(32) { 0.025f }
         }
+    }
+
+    fun refreshVisualizer() {
+        val sessionId = mediaPlayer?.audioSessionId ?: return
+        if (_isPlaying.value) attachVisualizer(sessionId)
     }
 
     private fun releaseVisualizer() {
