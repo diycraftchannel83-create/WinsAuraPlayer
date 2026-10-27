@@ -44,6 +44,13 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     private val _dspSettings = MutableStateFlow(DspSettings())
     val dspSettings: StateFlow<DspSettings> = _dspSettings.asStateFlow()
 
+    private val _isDarkMode = MutableStateFlow(true)
+    val isDarkMode: StateFlow<Boolean> = _isDarkMode.asStateFlow()
+
+    fun toggleDarkMode() {
+        _isDarkMode.value = !_isDarkMode.value
+    }
+
     private val _visualizerMode = MutableStateFlow(VisualizerMode.SPECTRUM_BARS)
     val visualizerMode: StateFlow<VisualizerMode> = _visualizerMode.asStateFlow()
 

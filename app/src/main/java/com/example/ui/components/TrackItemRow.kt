@@ -32,16 +32,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
+import androidx.compose.material3.MaterialTheme
 import com.example.model.Track
-import com.example.ui.theme.DividerColor
 import com.example.ui.theme.NeonCyan
-import com.example.ui.theme.StudioCard
-import com.example.ui.theme.StudioCardElevated
-import com.example.ui.theme.StudioDarkBg
-import com.example.ui.theme.TextPrimary
-import com.example.ui.theme.TextSecondary
-import com.example.ui.theme.TextTertiary
 
 @Composable
 fun TrackItemRow(
@@ -54,11 +47,11 @@ fun TrackItemRow(
     Card(
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isCurrent) StudioCardElevated else StudioCard
+            containerColor = if (isCurrent) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
         ),
         border = androidx.compose.foundation.BorderStroke(
             1.dp,
-            if (isCurrent) NeonCyan else DividerColor
+            if (isCurrent) NeonCyan else MaterialTheme.colorScheme.outline
         ),
         modifier = modifier
             .fillMaxWidth()
@@ -76,27 +69,14 @@ fun TrackItemRow(
                 modifier = Modifier
                     .size(50.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(StudioDarkBg)
+                    .background(MaterialTheme.colorScheme.surface)
             ) {
-                if (track.coverUrl.isNotEmpty()) {
-                    AsyncImage(
-                        model = track.coverUrl,
-                        contentDescription = track.title,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Equalizer,
-                            contentDescription = null,
-                            tint = NeonCyan
-                        )
-                    }
-                }
+                AudioCoverImage(
+                    track = track,
+                    contentDescription = track.title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
 
                 if (isCurrent && isPlaying) {
                     Box(
@@ -121,7 +101,7 @@ fun TrackItemRow(
                 Text(
                     text = track.title,
                     fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.SemiBold,
-                    color = if (isCurrent) NeonCyan else TextPrimary,
+                    color = if (isCurrent) NeonCyan else MaterialTheme.colorScheme.onSurface,
                     fontSize = 15.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -131,7 +111,7 @@ fun TrackItemRow(
 
                 Text(
                     text = "${track.artist} • ${track.album}",
-                    color = TextSecondary,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 12.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -139,7 +119,7 @@ fun TrackItemRow(
 
                 Text(
                     text = "${track.genre} • ${track.formattedDuration()}",
-                    color = TextTertiary,
+                    color = MaterialTheme.colorScheme.outline,
                     fontSize = 11.sp
                 )
             }
@@ -148,7 +128,7 @@ fun TrackItemRow(
                 modifier = Modifier
                     .size(36.dp)
                     .background(
-                        if (isCurrent) NeonCyan else StudioDarkBg,
+                        if (isCurrent) NeonCyan else MaterialTheme.colorScheme.surface,
                         CircleShape
                     ),
                 contentAlignment = Alignment.Center
@@ -156,7 +136,7 @@ fun TrackItemRow(
                 Icon(
                     imageVector = Icons.Default.PlayArrow,
                     contentDescription = "Putar",
-                    tint = if (isCurrent) StudioDarkBg else TextSecondary,
+                    tint = if (isCurrent) MaterialTheme.colorScheme.background else MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp)
                 )
             }

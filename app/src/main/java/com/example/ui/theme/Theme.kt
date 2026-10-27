@@ -1,8 +1,8 @@
 package com.example.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
@@ -28,13 +28,36 @@ private val DarkColorScheme = darkColorScheme(
     onError = Color.White
 )
 
+private val LightColorScheme = lightColorScheme(
+    primary = NeonCyanDark,
+    onPrimary = Color.White,
+    primaryContainer = StudioLightCardElevated,
+    onPrimaryContainer = NeonCyanDark,
+    secondary = ElectricBlueDark,
+    onSecondary = Color.White,
+    secondaryContainer = StudioLightCard,
+    onSecondaryContainer = ElectricBlueDark,
+    tertiary = AccentAmber,
+    onTertiary = Color.White,
+    background = StudioLightBg,
+    onBackground = TextPrimaryLight,
+    surface = StudioLightSurface,
+    onSurface = TextPrimaryLight,
+    surfaceVariant = StudioLightCard,
+    onSurfaceVariant = TextSecondaryLight,
+    outline = DividerColorLight,
+    error = AccentMagenta,
+    onError = Color.White
+)
+
 @Composable
 fun AuraSoundTheme(
-    darkTheme: Boolean = true, // Default to sleek studio dark aesthetic
+    darkTheme: Boolean = true,
     content: @Composable () -> Unit
 ) {
+    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
     MaterialTheme(
-        colorScheme = DarkColorScheme,
+        colorScheme = colorScheme,
         typography = Typography,
         content = content
     )

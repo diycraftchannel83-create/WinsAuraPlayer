@@ -368,15 +368,13 @@ fun DspEqualizerScreen(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Scrollable 10-band sliders
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                // 10-Band Sliders in vertical layout
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     dspSettings.bands.forEachIndexed { idx, band ->
-                        BandColumn(
+                        BandRow(
                             band = band,
                             enabled = dspSettings.isEnabled,
                             onLevelChange = { newLevel ->
@@ -453,52 +451,108 @@ fun DspEqualizerScreen(
 }
 
 @Composable
-private fun BandColumn(
+private fun BandRow(
     band: EqualizerBand,
     enabled: Boolean,
     onLevelChange: (Int) -> Unit
 ) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.width(52.dp)
+    Card(
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = StudioCard),
+        border = androidx.compose.foundation.BorderStroke(0.8.dp, DividerColor),
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("equalizer_band_${band.index}")
     ) {
-        Text(
-            text = band.formattedDb(),
-            color = if (band.levelMb > 0) NeonCyan else TextSecondary,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.SemiBold
-        )
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        // Slider for band level (-1500 to +1500 mB)
-        // In vertical slider representation or horizontal slider in a constrained box
-        Slider(
-            value = band.levelMb.toFloat(),
-            onValueChange = { onLevelChange(it.toInt()) },
-            valueRange = -1500f..1500f,
-            enabled = enabled,
-            colors = SliderDefaults.colors(
-                thumbColor = NeonCyan,
-                activeTrackColor = NeonCyan,
-                inactiveTrackColor = DividerColor
-            ),
-            modifier = Modifier.height(120.dp)
-        )
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        Box(
+        Column(
             modifier = Modifier
-                .background(StudioCard, RoundedCornerShape(4.dp))
-                .padding(horizontal = 6.dp, vertical = 2.dp)
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 10.dp)
         ) {
-            Text(
-                text = band.formattedFreq(),
-                color = TextTertiary,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .background(
+                                Brush.horizontalGradient(
+                                    listOf(NeonCyan.copy(alpha = 0.2f), ElectricBlue.copy(alpha = 0.2f))
+                                ),
+                                RoundedCornerShape(6.dp)
+                            )
+                            .border(1.dp, NeonCyan.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
+                            .padding(horizontal = 10.dp, vertical = 3.dp)
+                    ) {
+                        Text(
+                            text = band.formattedFreq(),
+                            color = NeonCyan,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(10.dp))
+
+                    Text(
+                        text = when (band.index) {
+                            0, 1 -> "Sub-Bass"
+                            2, 3 -> "Bass & Low-Mid"
+                            4, 5 -> "Midrange Vokal"
+                            6, 7 -> "Upper-Mid / Clarity"
+                            else -> "High Treble / Air"
+                        },
+                        fontSize = 11.sp,
+                        color = TextTertiary
+                    )
+                }
+
+                Text(
+                    text = band.formattedDb(),
+                    color = if (band.levelMb > 0) NeonCyan else if (band.levelMb < 0) AccentMagenta else TextSecondary,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "-15dB",
+                    fontSize = 10.sp,
+                    color = TextTertiary,
+                    modifier = Modifier.width(36.dp)
+                )
+
+                Slider(
+                    value = band.levelMb.toFloat(),
+                    onValueChange = { onLevelChange(it.toInt()) },
+                    valueRange = -1500f..1500f,
+                    enabled = enabled,
+                    colors = SliderDefaults.colors(
+                        thumbColor = NeonCyan,
+                        activeTrackColor = NeonCyan,
+                        inactiveTrackColor = DividerColor
+                    ),
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag("band_slider_${band.index}")
+                )
+
+                Text(
+                    text = "+15dB",
+                    fontSize = 10.sp,
+                    color = TextTertiary,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.End,
+                    modifier = Modifier.width(36.dp)
+                )
+            }
         }
     }
 }

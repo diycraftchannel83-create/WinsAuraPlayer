@@ -68,4 +68,10 @@ class ExampleUnitTest {
         assertEquals("ca-app-pub-1254774552944426/9151767484", AdMobManager.APP_OPEN_AD_UNIT_ID)
         assertEquals("ca-app-pub-1254774552944426/3914322052", AdMobManager.INTERSTITIAL_AD_UNIT_ID)
     }
+
+    @Test
+    fun audioCoverArtHelper_constructsValidAlbumArtUri() {
+        val uri = com.example.data.AudioCoverArtHelper.getAlbumArtUriForAlbumId(12345L)
+        assertTrue(uri.contains("content://media/external/audio/albumart/12345"))
+    }
 }

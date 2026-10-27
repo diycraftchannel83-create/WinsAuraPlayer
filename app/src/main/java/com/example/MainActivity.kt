@@ -61,15 +61,20 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         AdMobManager.initialize(applicationContext)
         setContent {
-            AuraSoundTheme {
-                MainAppContent()
+            val viewModel: MusicViewModel = viewModel()
+            val isDarkMode by viewModel.isDarkMode.collectAsStateWithLifecycle()
+            AuraSoundTheme(darkTheme = isDarkMode) {
+                MainAppContent(viewModel = viewModel, isDarkMode = isDarkMode)
             }
         }
     }
 }
 
 @Composable
-fun MainAppContent(viewModel: MusicViewModel = viewModel()) {
+fun MainAppContent(
+    viewModel: MusicViewModel = viewModel(),
+    isDarkMode: Boolean = true
+) {
     val allTracks by viewModel.allTracks.collectAsStateWithLifecycle()
     val activeTab by viewModel.activeTab.collectAsStateWithLifecycle()
     val currentTrack by viewModel.currentTrack.collectAsStateWithLifecycle()
@@ -83,7 +88,7 @@ fun MainAppContent(viewModel: MusicViewModel = viewModel()) {
     val interstitialAdVisible by viewModel.interstitialAdVisible.collectAsStateWithLifecycle()
     val isNowPlayingExpanded by viewModel.isNowPlayingExpanded.collectAsStateWithLifecycle()
 
-    Box(modifier = Modifier.fillMaxSize().background(StudioDarkBg)) {
+    Box(modifier = Modifier.fillMaxSize().background(androidx.compose.material3.MaterialTheme.colorScheme.background)) {
         Scaffold(
             bottomBar = {
                 Column(
@@ -109,8 +114,8 @@ fun MainAppContent(viewModel: MusicViewModel = viewModel()) {
 
                     // M3 Bottom Navigation Bar
                     NavigationBar(
-                        containerColor = StudioCard,
-                        contentColor = TextPrimary,
+                        containerColor = androidx.compose.material3.MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = androidx.compose.material3.MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.testTag("main_bottom_nav")
                     ) {
                         // 1. Now Playing Tab (replacing old online artist tab)
@@ -131,7 +136,7 @@ fun MainAppContent(viewModel: MusicViewModel = viewModel()) {
                                 )
                             },
                             colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = StudioDarkBg,
+                                selectedIconColor = androidx.compose.material3.MaterialTheme.colorScheme.surface,
                                 selectedTextColor = NeonCyan,
                                 indicatorColor = NeonCyan,
                                 unselectedIconColor = TextTertiary,
@@ -158,7 +163,7 @@ fun MainAppContent(viewModel: MusicViewModel = viewModel()) {
                                 )
                             },
                             colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = StudioDarkBg,
+                                selectedIconColor = androidx.compose.material3.MaterialTheme.colorScheme.surface,
                                 selectedTextColor = NeonCyan,
                                 indicatorColor = NeonCyan,
                                 unselectedIconColor = TextTertiary,
@@ -185,7 +190,7 @@ fun MainAppContent(viewModel: MusicViewModel = viewModel()) {
                                 )
                             },
                             colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = StudioDarkBg,
+                                selectedIconColor = androidx.compose.material3.MaterialTheme.colorScheme.surface,
                                 selectedTextColor = NeonCyan,
                                 indicatorColor = NeonCyan,
                                 unselectedIconColor = TextTertiary,
@@ -212,7 +217,7 @@ fun MainAppContent(viewModel: MusicViewModel = viewModel()) {
                                 )
                             },
                             colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = StudioDarkBg,
+                                selectedIconColor = androidx.compose.material3.MaterialTheme.colorScheme.surface,
                                 selectedTextColor = NeonCyan,
                                 indicatorColor = NeonCyan,
                                 unselectedIconColor = TextTertiary,
@@ -223,7 +228,7 @@ fun MainAppContent(viewModel: MusicViewModel = viewModel()) {
                     }
                 }
             },
-            containerColor = StudioDarkBg
+            containerColor = androidx.compose.material3.MaterialTheme.colorScheme.background
         ) { innerPadding ->
             Box(
                 modifier = Modifier
@@ -246,7 +251,9 @@ fun MainAppContent(viewModel: MusicViewModel = viewModel()) {
                             onNext = { viewModel.playNext() },
                             onPrevious = { viewModel.playPrevious() },
                             onOpenDsp = { viewModel.setActiveTab(NavigationTab.DSP_STUDIO) },
-                            onShowAd = { viewModel.showInterstitialAd() }
+                            onShowAd = { viewModel.showInterstitialAd() },
+                            isDarkMode = isDarkMode,
+                            onToggleTheme = { viewModel.toggleDarkMode() }
                         )
                     }
 
@@ -313,7 +320,9 @@ fun MainAppContent(viewModel: MusicViewModel = viewModel()) {
                         viewModel.setNowPlayingExpanded(false)
                         viewModel.setActiveTab(NavigationTab.DSP_STUDIO)
                     },
-                    onDismiss = { viewModel.setNowPlayingExpanded(false) }
+                    onDismiss = { viewModel.setNowPlayingExpanded(false) },
+                    isDarkMode = isDarkMode,
+                    onToggleTheme = { viewModel.toggleDarkMode() }
                 )
             }
         }

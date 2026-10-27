@@ -27,9 +27,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Lyrics
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -72,6 +74,7 @@ import com.example.model.DspSettings
 import com.example.model.LrcParser
 import com.example.model.Track
 import com.example.model.VisualizerMode
+import com.example.ui.components.AudioCoverImage
 import com.example.ui.components.AudioVisualizerView
 import com.example.ui.components.SynchronizedLyricsView
 import com.example.ui.theme.AccentAmber
@@ -108,6 +111,8 @@ fun NowPlayingModal(
     onPrevious: () -> Unit,
     onOpenDsp: () -> Unit,
     onDismiss: () -> Unit,
+    isDarkMode: Boolean = true,
+    onToggleTheme: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     BackHandler { onDismiss() }
@@ -134,33 +139,39 @@ fun NowPlayingModal(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(StudioDarkBg)
+            .background(MaterialTheme.colorScheme.background)
             .statusBarsPadding()
             .testTag("now_playing_modal")
     ) {
-        // Ambient Album Cover Background
-        if (track.coverUrl.isNotEmpty()) {
-            AsyncImage(
-                model = track.coverUrl,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
-            )
-            // Multi-stop gradient overlay for deep dark ambiance and high contrast
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
+        // Ambient Album Cover Background from MP3 tag or coverUrl
+        AudioCoverImage(
+            track = track,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+        // Multi-stop gradient overlay adapting to Light and Dark mode
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = if (isDarkMode) {
+                            listOf(
                                 StudioDarkBg.copy(alpha = 0.82f),
                                 StudioDarkBg.copy(alpha = 0.88f),
                                 StudioDarkBg.copy(alpha = 0.96f)
                             )
-                        )
+                        } else {
+                            listOf(
+                                MaterialTheme.colorScheme.background.copy(alpha = 0.85f),
+                                MaterialTheme.colorScheme.background.copy(alpha = 0.92f),
+                                MaterialTheme.colorScheme.background.copy(alpha = 0.97f)
+                            )
+                        }
                     )
-            )
-        }
+                )
+        )
 
         Column(
             modifier = Modifier
@@ -202,16 +213,30 @@ fun NowPlayingModal(
                     )
                 }
 
-                IconButton(
-                    onClick = onOpenDsp,
-                    modifier = Modifier.testTag("open_dsp_button")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.GraphicEq,
-                        contentDescription = "Buka Equalizer & DSP",
-                        tint = if (dspSettings.isEnabled) NeonCyan else TextSecondary,
-                        modifier = Modifier.size(26.dp)
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = onToggleTheme,
+                        modifier = Modifier.testTag("modal_theme_toggle_button")
+                    ) {
+                        Icon(
+                            imageVector = if (isDarkMode) Icons.Default.LightMode else Icons.Default.DarkMode,
+                            contentDescription = if (isDarkMode) "Beralih ke Mode Terang" else "Beralih ke Mode Gelap",
+                            tint = if (isDarkMode) AccentAmber else NeonCyan,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
+                    IconButton(
+                        onClick = onOpenDsp,
+                        modifier = Modifier.testTag("open_dsp_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.GraphicEq,
+                            contentDescription = "Buka Equalizer & DSP",
+                            tint = if (dspSettings.isEnabled) NeonCyan else TextSecondary,
+                            modifier = Modifier.size(26.dp)
+                        )
+                    }
                 }
             }
 
@@ -272,33 +297,17 @@ fun NowPlayingModal(
                                 .rotate(if (isPlaying) rotationAngle else 0f),
                             contentAlignment = Alignment.Center
                         ) {
-                            if (track.coverUrl.isNotEmpty()) {
-                                AsyncImage(
-                                    model = track.coverUrl,
-                                    contentDescription = track.title,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            } else {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(StudioCardElevated),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Equalizer,
-                                        contentDescription = null,
-                                        tint = NeonCyan,
-                                        modifier = Modifier.size(64.dp)
-                                    )
-                                }
-                            }
+                            AudioCoverImage(
+                                track = track,
+                                contentDescription = track.title,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize()
+                            )
                             // Center Vinyl Hole
                             Box(
                                 modifier = Modifier
                                     .size(36.dp)
-                                    .background(StudioDarkBg, CircleShape)
+                                    .background(if (isDarkMode) StudioDarkBg else Color.White, CircleShape)
                                     .border(2.dp, NeonCyan, CircleShape)
                             )
                         }

@@ -62,7 +62,7 @@ fun MiniPlayerBar(
 ) {
     Card(
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = StudioCardElevated),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
         border = androidx.compose.foundation.BorderStroke(1.dp, NeonCyan.copy(alpha = 0.35f)),
         modifier = modifier
             .fillMaxWidth()
@@ -82,28 +82,14 @@ fun MiniPlayerBar(
                     modifier = Modifier
                         .size(46.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(StudioDarkBg)
+                        .background(MaterialTheme.colorScheme.surface)
                 ) {
-                    if (track.coverUrl.isNotEmpty()) {
-                        AsyncImage(
-                            model = track.coverUrl,
-                            contentDescription = track.title,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    } else {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Equalizer,
-                                contentDescription = null,
-                                tint = NeonCyan,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                    }
+                    AudioCoverImage(
+                        track = track,
+                        contentDescription = track.title,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
                 }
 
                 Spacer(modifier = Modifier.width(10.dp))
@@ -115,7 +101,7 @@ fun MiniPlayerBar(
                             text = track.title,
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
-                            color = TextPrimary,
+                            color = MaterialTheme.colorScheme.onSurface,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -123,7 +109,7 @@ fun MiniPlayerBar(
                     Text(
                         text = "${track.artist} • ${track.album}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )

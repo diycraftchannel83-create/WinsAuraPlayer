@@ -155,6 +155,7 @@ object MusicCatalog {
             MediaStore.Audio.Media.TITLE,
             MediaStore.Audio.Media.ARTIST,
             MediaStore.Audio.Media.ALBUM,
+            MediaStore.Audio.Media.ALBUM_ID,
             MediaStore.Audio.Media.DURATION
         )
         val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
@@ -173,6 +174,7 @@ object MusicCatalog {
                 val titleCol = it.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
                 val artistCol = it.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
                 val albumCol = it.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)
+                val albumIdCol = it.getColumnIndex(MediaStore.Audio.Media.ALBUM_ID)
                 val durCol = it.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
 
                 while (it.moveToNext()) {
@@ -181,10 +183,15 @@ object MusicCatalog {
                     val artist = it.getString(artistCol) ?: "Artis Lokal"
                     val album = it.getString(albumCol) ?: "Album Penyimpanan"
                     val duration = it.getLong(durCol)
+                    val albumId = if (albumIdCol >= 0) it.getLong(albumIdCol) else -1L
                     val contentUri: Uri = ContentUris.withAppendedId(
                         MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
                         id
                     )
+
+                    val coverUri = if (albumId > 0) {
+                        AudioCoverArtHelper.getAlbumArtUriForAlbumId(albumId)
+                    } else ""
 
                     deviceTracks.add(
                         Track(
@@ -194,7 +201,7 @@ object MusicCatalog {
                             album = album,
                             durationMs = if (duration > 0) duration else 180000L,
                             audioUrl = contentUri.toString(),
-                            coverUrl = "",
+                            coverUrl = coverUri,
                             genre = "Lokal / Perangkat",
                             isOnline = false,
                             moodTags = listOf("Santai", "Fokus Belajar"),
