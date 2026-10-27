@@ -65,6 +65,9 @@ fun LibraryScreen(
     isPlaying: Boolean,
     onTrackSelect: (Track) -> Unit,
     onScanDevice: () -> Unit,
+    isScanning: Boolean = false,
+    scanMessage: String? = null,
+    onScanPermissionDenied: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -76,6 +79,8 @@ fun LibraryScreen(
     ) { isGranted ->
         if (isGranted) {
             onScanDevice()
+        } else {
+            onScanPermissionDenied()
         }
     }
 
@@ -120,6 +125,7 @@ fun LibraryScreen(
                     }
 
                     Button(
+                        enabled = !isScanning,
                         onClick = {
                             val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                                 Manifest.permission.READ_MEDIA_AUDIO
@@ -145,12 +151,23 @@ fun LibraryScreen(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Pindai File",
+                            text = if (isScanning) "Memindai…" else "Pindai File",
                             color = NeonCyan,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
+                }
+
+                if (!scanMessage.isNullOrBlank()) {
+                    Text(
+                        text = scanMessage,
+                        color = if (scanMessage.startsWith("Pemindaian gagal") || scanMessage.startsWith("Izin akses")) TextTertiary else NeonCyan,
+                        fontSize = 12.sp,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 10.dp)
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(14.dp))
