@@ -88,6 +88,8 @@ fun MainAppContent(
     val appOpenAdVisible by viewModel.appOpenAdVisible.collectAsStateWithLifecycle()
     val interstitialAdVisible by viewModel.interstitialAdVisible.collectAsStateWithLifecycle()
     val isNowPlayingExpanded by viewModel.isNowPlayingExpanded.collectAsStateWithLifecycle()
+    val isScanningMedia by viewModel.isScanningMedia.collectAsStateWithLifecycle()
+    val scanMessage by viewModel.scanMessage.collectAsStateWithLifecycle()
 
     Box(modifier = Modifier.fillMaxSize().background(androidx.compose.material3.MaterialTheme.colorScheme.background)) {
         Scaffold(
@@ -269,7 +271,10 @@ fun MainAppContent(
                                 viewModel.playTrack(it)
                                 viewModel.setActiveTab(NavigationTab.NOW_PLAYING)
                             },
-                            onScanDevice = { viewModel.scanDeviceAudio() }
+                            onScanDevice = { viewModel.scanDeviceAudio() },
+                            isScanning = isScanningMedia,
+                            scanMessage = scanMessage,
+                            onScanPermissionDenied = { viewModel.reportScanPermissionDenied() }
                         )
                     }
 
