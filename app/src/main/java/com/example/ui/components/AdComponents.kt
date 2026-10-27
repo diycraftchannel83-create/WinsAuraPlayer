@@ -219,136 +219,22 @@ fun InterstitialAdDialog(
     if (!visible) return
 
     val context = LocalContext.current
-    var countdown by remember { mutableIntStateOf(2) }
-
-    LaunchedEffect(Unit) {
+    LaunchedEffect(visible) {
         val activity = context as? Activity
-        if (activity != null && AdMobManager.isInterstitialAdReady()) {
+        if (activity == null || activity.isFinishing || activity.isDestroyed) {
+            onDismiss()
+            return@LaunchedEffect
+        }
+
+        if (AdMobManager.isInterstitialAdReady()) {
             AdMobManager.showInterstitialAd(activity) {
                 onDismiss()
             }
         } else {
-            while (countdown > 0) {
-                delay(1000L)
-                countdown--
-            }
-        }
-    }
-
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = false)
-    ) {
-        Card(
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = StudioCardElevated),
-            border = androidx.compose.foundation.BorderStroke(
-                1.dp,
-                Brush.linearGradient(listOf(AccentMagenta.copy(alpha = 0.5f), ElectricBlue.copy(alpha = 0.3f)))
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(6.dp)
-                .testTag("interstitial_ad_dialog")
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .background(AccentMagenta.copy(alpha = 0.2f), RoundedCornerShape(6.dp))
-                            .padding(horizontal = 8.dp, vertical = 3.dp)
-                    ) {
-                        Text(
-                            text = "INTERSTITIAL AD",
-                            color = AccentMagenta,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-
-                    IconButton(
-                        onClick = onDismiss,
-                        modifier = Modifier
-                            .size(36.dp)
-                            .testTag("close_interstitial_ad_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Tutup",
-                            tint = TextSecondary
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                Box(
-                    modifier = Modifier
-                        .size(60.dp)
-                        .background(AccentMagenta.copy(alpha = 0.15f), CircleShape)
-                        .border(1.5.dp, AccentMagenta, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.GraphicEq,
-                        contentDescription = null,
-                        tint = AccentMagenta,
-                        modifier = Modifier.size(32.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Text(
-                    text = "AuraSound Dolby 3D Spatial Audio",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary
-                )
-
-                Text(
-                    text = "Unit ID: ${AdMobManager.INTERSTITIAL_AD_UNIT_ID}",
-                    fontSize = 10.sp,
-                    color = TextTertiary,
-                    modifier = Modifier.padding(top = 2.dp)
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = "Aktifkan efek audio Dolby 3D surround sound dan bass boost untuk kedalaman frekuensi maksimal.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = TextSecondary,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                )
-
-                Spacer(modifier = Modifier.height(18.dp))
-
-                Button(
-                    onClick = onDismiss,
-                    colors = ButtonDefaults.buttonColors(containerColor = AccentMagenta),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(46.dp)
-                        .testTag("dismiss_interstitial_button")
-                ) {
-                    Text(
-                        text = if (countdown > 0) "Tutup ($countdown)" else "Lanjutkan",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
+            // Do not display a fake interstitial dialog. Load the real AdMob ad for
+            // the next eligible trigger and close this trigger safely.
+            AdMobManager.loadInterstitialAd(activity)
+            onDismiss()
         }
     }
 }
