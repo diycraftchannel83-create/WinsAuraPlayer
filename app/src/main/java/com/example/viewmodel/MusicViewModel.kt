@@ -14,6 +14,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+enum class RepeatMode { OFF, ALL, ONE }
+
 enum class NavigationTab(val title: String) {
     NOW_PLAYING("Pemutar"),
     LIBRARY("Pustaka"),
@@ -27,6 +29,10 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _allTracks = MutableStateFlow<List<Track>>(MusicCatalog.getAllInitialTracks())
     val allTracks: StateFlow<List<Track>> = _allTracks.asStateFlow()
+
+    private val _repeatMode = MutableStateFlow(RepeatMode.OFF)
+    val repeatMode: StateFlow<RepeatMode> = _repeatMode.asStateFlow()
+    fun cycleRepeatMode() { _repeatMode.value = when (_repeatMode.value) { RepeatMode.OFF -> RepeatMode.ALL; RepeatMode.ALL -> RepeatMode.ONE; RepeatMode.ONE -> RepeatMode.OFF } }
 
     private val _activeTab = MutableStateFlow(NavigationTab.NOW_PLAYING)
     val activeTab: StateFlow<NavigationTab> = _activeTab.asStateFlow()
@@ -64,11 +70,21 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     private var songChangeCount = 0
 
     init {
+        _allTracks.value = MusicCatalog.loadSavedTracks(application)
+
         // Initialize AdMob SDK
         AdMobManager.initialize(application)
 
         playerManager.onTrackCompleted = {
-            playNext()
+            when (_repeatMode.value) {
+                RepeatMode.ONE -> currentTrack.value?.let { playTrack(it) }
+                RepeatMode.ALL -> playNext()
+                RepeatMode.OFF -> {
+                    val tracks = _allTracks.value
+                    val index = tracks.indexOfFirst { it.id == currentTrack.value?.id }
+                    if (index >= 0 && index < tracks.lastIndex) playTrack(tracks[index + 1])
+                }
+            }
         }
     }
 
@@ -158,7 +174,9 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     fun scanDeviceAudio() {
         viewModelScope.launch {
             val localTracks = MusicCatalog.scanLocalDeviceAudio(getApplication())
-            _allTracks.value = localTracks.distinctBy { it.id }
+            val uniqueTracks = localTracks.distinctBy { it.id }
+            _allTracks.value = uniqueTracks
+            MusicCatalog.saveTracks(getApplication(), uniqueTracks)
         }
     }
 
