@@ -39,6 +39,11 @@ object AudioCoverArtHelper {
         return BitmapFactory.decodeResource(context.resources, com.example.R.mipmap.ic_launcher)
     }
 
+    /** Remove cached artwork after the corresponding audio file metadata changes. */
+    fun clearArtworkCache(audioUri: String) {
+        memoryCache.remove(audioUri)
+    }
+
     suspend fun loadEmbeddedCoverArt(context: Context, audioUri: String): Bitmap? = withContext(Dispatchers.IO) {
         if (audioUri.isBlank()) return@withContext null
         memoryCache.get(audioUri)?.let { return@withContext it }
