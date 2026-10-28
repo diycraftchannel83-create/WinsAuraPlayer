@@ -118,7 +118,7 @@ fun LrcStudioScreen(
     val context = LocalContext.current
 
     // Lines state initialized from track lyrics
-    var lines by remember {
+    var lines by remember(track.id, track.lyricsLrc) {
         val parsed = LrcParser.parsePlainOrLrc(track.lyricsLrc)
         mutableStateOf(parsed)
     }
