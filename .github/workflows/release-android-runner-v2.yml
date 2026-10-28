@@ -44,7 +44,8 @@ jobs:
           git add "$FILE"
           if ! git diff --cached --quiet; then
             git commit -m "chore: increment Android versionCode to $NEXT_CODE [skip ci]"
-            git push origin "HEAD:${GITHUB_REF_NAME}"
+            # Use an explicit branch ref because a tag named "main" may also exist.
+            git push origin "HEAD:refs/heads/${GITHUB_REF_NAME}"
           fi
 
       - name: Set up JDK 17
