@@ -80,6 +80,17 @@ secrets {
 
 googleServices { missingGoogleServicesStrategy = MissingGoogleServicesStrategy.WARN }
 
+// Force transitive AndroidX Fragment dependencies to a supported stable version.
+configurations.configureEach {
+  resolutionStrategy.eachDependency {
+    if (requested.group == "androidx.fragment" &&
+        requested.name in setOf("fragment", "fragment-ktx", "fragment-compose")) {
+      useVersion("1.9.1")
+      because("Avoid outdated AndroidX Fragment versions pulled by transitive dependencies.")
+    }
+  }
+}
+
 // Some unused dependencies are commented out below instead of being removed.
 dependencies {
   implementation(platform(libs.androidx.compose.bom))
