@@ -83,22 +83,21 @@ class PlaybackService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val action = intent?.action
 
-        when (action) {
-            ACTION_PLAY_PAUSE -> {
-                onPlayPauseAction?.invoke()
+        // Notification actions must not crash the foreground service if a stale callback fails.
+        try {
+            when (action) {
+                ACTION_PLAY_PAUSE -> onPlayPauseAction?.invoke()
+                ACTION_STOP -> {
+                    onStopAction?.invoke()
+                    stopForegroundNotification()
+                    stopSelf()
+                    return START_NOT_STICKY
+                }
+                ACTION_NEXT -> onNextAction?.invoke()
+                ACTION_PREV -> onPrevAction?.invoke()
             }
-            ACTION_STOP -> {
-                onStopAction?.invoke()
-                stopForegroundNotification()
-                stopSelf()
-                return START_NOT_STICKY
-            }
-            ACTION_NEXT -> {
-                onNextAction?.invoke()
-            }
-            ACTION_PREV -> {
-                onPrevAction?.invoke()
-            }
+        } catch (_: Exception) {
+            // Keep playback service alive if a player callback throws.
         }
 
         val track = currentPlayingTrack
@@ -116,8 +115,12 @@ class PlaybackService : Service() {
                 }
             } catch (e: Exception) {
                 // Handle ForegroundServiceStartNotAllowedException on Android 12+ if in background
-                val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-                manager.notify(NOTIFICATION_ID, notification)
+                try {
+                    val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                    manager.notify(NOTIFICATION_ID, notification)
+                } catch (_: Exception) {
+                    // Some Android builds restrict fallback notification updates.
+                }
             }
         } else {
             stopForegroundNotification()
@@ -199,7 +202,7 @@ class PlaybackService : Service() {
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification_play)
             .setLargeIcon(coverBitmap)
-            .setColor(0xFF00E5FF.toInt())
+            .setColor(0xFF000000.toInt())
             .setColorized(true)
             .setContentTitle(track.title)
             .setContentText("${track.artist} • ${track.album}")
