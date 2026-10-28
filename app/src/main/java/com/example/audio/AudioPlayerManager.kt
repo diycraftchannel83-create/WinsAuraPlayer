@@ -145,6 +145,10 @@ class AudioPlayerManager(private val context: Context) {
         }
     }
 
+    fun updateCurrentTrackLyrics(lyricsLrc: String) {
+        _currentTrack.value = _currentTrack.value?.copy(lyricsLrc = lyricsLrc)
+    }
+
     fun pause() {
         val player = mediaPlayer ?: return
         if (!playerPrepared) return

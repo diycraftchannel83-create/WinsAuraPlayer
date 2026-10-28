@@ -28,6 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Lyrics
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
@@ -128,6 +129,7 @@ fun NowPlayingScreen(
     onShowAd: () -> Unit = {},
     isDarkMode: Boolean = true,
     onToggleTheme: () -> Unit = {},
+    onOpenLrcStudio: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     if (track == null) {
@@ -354,6 +356,18 @@ fun NowPlayingScreen(
                             fontWeight = FontWeight.Bold
                         )
                     }
+                }
+
+                IconButton(
+                    onClick = onOpenLrcStudio,
+                    modifier = Modifier.testTag("open_lrc_studio_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Lyrics,
+                        contentDescription = "Buka WinsLyric Editor LRC Studio",
+                        tint = NeonCyan,
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
 
                 IconButton(

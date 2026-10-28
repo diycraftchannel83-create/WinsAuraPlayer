@@ -55,6 +55,7 @@ import com.example.ui.components.MiniPlayerBar
 import com.example.ui.screens.AiPlaylistScreen
 import com.example.ui.screens.DspEqualizerScreen
 import com.example.ui.screens.LibraryScreen
+import com.example.ui.screens.LrcStudioScreen
 import com.example.ui.screens.NowPlayingModal
 import com.example.ui.screens.NowPlayingScreen
 import com.example.ui.screens.SettingsScreen
@@ -100,6 +101,7 @@ fun MainAppContent(
     val appOpenAdVisible by viewModel.appOpenAdVisible.collectAsStateWithLifecycle()
     val interstitialAdVisible by viewModel.interstitialAdVisible.collectAsStateWithLifecycle()
     val isNowPlayingExpanded by viewModel.isNowPlayingExpanded.collectAsStateWithLifecycle()
+    val isLrcStudioOpen by viewModel.isLrcStudioOpen.collectAsStateWithLifecycle()
     val isScanningMedia by viewModel.isScanningMedia.collectAsStateWithLifecycle()
     val scanMessage by viewModel.scanMessage.collectAsStateWithLifecycle()
 
@@ -314,7 +316,8 @@ fun MainAppContent(
                             onOpenDsp = { viewModel.setActiveTab(NavigationTab.DSP_STUDIO) },
                             onShowAd = { viewModel.showInterstitialAd() },
                             isDarkMode = isDarkMode,
-                            onToggleTheme = { viewModel.toggleDarkMode() }
+                            onToggleTheme = { viewModel.toggleDarkMode() },
+                            onOpenLrcStudio = { viewModel.openLrcStudio() }
                         )
                     }
 
@@ -398,6 +401,25 @@ fun MainAppContent(
                     onToggleTheme = { viewModel.toggleDarkMode() }
                 )
             }
+        }
+
+        // LRC Studio imported from WinsLyricEditor.
+        AnimatedVisibility(
+            visible = isLrcStudioOpen && (currentTrack ?: allTracks.firstOrNull()) != null,
+            enter = slideInVertically(initialOffsetY = { it }),
+            exit = slideOutVertically(targetOffsetY = { it })
+        ) {
+            val activeSong = currentTrack ?: allTracks.first()
+            LrcStudioScreen(
+                track = activeSong,
+                isPlaying = isPlaying,
+                currentPositionMs = currentPositionMs,
+                durationMs = durationMs,
+                onTogglePlayPause = { viewModel.togglePlayPause() },
+                onSeekTo = { viewModel.seekTo(it) },
+                onSaveLyrics = { lines -> viewModel.saveAndApplyLyrics(activeSong, lines) },
+                onClose = { viewModel.closeLrcStudio() }
+            )
         }
 
         // App Open Ad on launch with ID ca-app-pub-1254774552944426/9151767484

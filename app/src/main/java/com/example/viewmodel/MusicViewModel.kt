@@ -6,6 +6,10 @@ import androidx.lifecycle.viewModelScope
 import com.example.ads.AdMobManager
 import com.example.audio.AudioPlayerManager
 import com.example.data.MusicCatalog
+import com.example.data.LrcStorageHelper
+import com.example.model.LyricsLine
+import com.example.model.LrcParser
+import java.io.File
 import com.example.model.DspSettings
 import com.example.model.Track
 import com.example.model.VisualizerMode
@@ -28,6 +32,26 @@ enum class NavigationTab(val title: String) {
 }
 
 class MusicViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val _isLrcStudioOpen = MutableStateFlow(false)
+    val isLrcStudioOpen: StateFlow<Boolean> = _isLrcStudioOpen.asStateFlow()
+    fun openLrcStudio() { _isLrcStudioOpen.value = true }
+    fun closeLrcStudio() { _isLrcStudioOpen.value = false }
+
+    fun saveAndApplyLyrics(track: Track, lines: List<LyricsLine>): File {
+        val content = LrcParser.formatToLrc(lines, track.artist, track.title)
+        val file = LrcStorageHelper.saveLrcFile(
+            context = getApplication(),
+            artist = track.artist,
+            title = track.title,
+            lrcContent = content
+        )
+        val updated = _allTracks.value.map { if (it.id == track.id) it.copy(lyricsLrc = content) else it }
+        _allTracks.value = updated
+        MusicCatalog.saveTracks(getApplication(), updated)
+        if (currentTrack.value?.id == track.id) playerManager.updateCurrentTrackLyrics(content)
+        return file
+    }
 
     private val playerManager = AudioPlayerManager(application)
 
@@ -93,7 +117,9 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun playTrack(track: Track) {
-        playerManager.playTrack(track)
+        val saved = LrcStorageHelper.loadExistingLrc(getApplication(), track.artist, track.title)
+        val trackToPlay = if (!saved.isNullOrBlank()) track.copy(lyricsLrc = saved) else track
+        playerManager.playTrack(trackToPlay)
         songChangeCount++
         if (songChangeCount % 5 == 0) {
             _interstitialAdVisible.value = true
