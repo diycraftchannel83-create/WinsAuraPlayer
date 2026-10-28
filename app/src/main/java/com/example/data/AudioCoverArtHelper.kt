@@ -4,6 +4,7 @@ import android.content.ContentUris
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.util.LruCache
@@ -54,7 +55,22 @@ object AudioCoverArtHelper {
         } finally {
             try { retriever.release() } catch (_: Exception) { }
         }
-        return BitmapFactory.decodeResource(context.resources, com.example.R.mipmap.ic_launcher)
+        return createFallbackBitmap(context)
+    }
+
+    private fun createFallbackBitmap(context: Context): Bitmap {
+        try {
+            val drawable = context.getDrawable(com.example.R.mipmap.ic_launcher)
+            if (drawable != null) {
+                val width = drawable.intrinsicWidth.coerceIn(1, MAX_ART_SIZE)
+                val height = drawable.intrinsicHeight.coerceIn(1, MAX_ART_SIZE)
+                val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                drawable.setBounds(0, 0, width, height)
+                drawable.draw(Canvas(bitmap))
+                return bitmap
+            }
+        } catch (_: Exception) { }
+        return Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888)
     }
 
     private fun decodeCoverSource(context: Context, cover: String): Bitmap? {
@@ -111,7 +127,7 @@ object AudioCoverArtHelper {
             }
             val artBytes = retriever.embeddedPicture
             if (artBytes != null) {
-                val bitmap = BitmapFactory.decodeByteArray(artBytes, 0, artBytes.size)
+                val bitmap = decodeSampled(artBytes)
                 if (bitmap != null) {
                     memoryCache.put(audioUri, bitmap)
                     return@withContext bitmap
