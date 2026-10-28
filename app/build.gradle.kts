@@ -138,6 +138,7 @@ dependencies {
   // implementation(libs.play.services.location)
   implementation(libs.retrofit)
   implementation("net.jthink:jaudiotagger:3.0.1")
+  implementation("androidx.media:media:1.7.0")
   testImplementation(libs.androidx.compose.ui.test.junit4)
   testImplementation(libs.androidx.core)
   testImplementation(libs.androidx.junit)

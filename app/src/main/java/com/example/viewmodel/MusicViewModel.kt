@@ -5,10 +5,13 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.ads.AdMobManager
 import com.example.audio.AudioPlayerManager
+import com.example.audio.PlaybackService
 import com.example.data.MusicCatalog
+import com.example.data.Id3TagEditor
 import com.example.data.LrcStorageHelper
 import com.example.model.LyricsLine
 import com.example.model.LrcParser
+import com.example.model.Mp3Metadata
 import java.io.File
 import com.example.model.DspSettings
 import com.example.model.Track
@@ -17,6 +20,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import android.util.Log
@@ -54,6 +59,24 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     private val playerManager = AudioPlayerManager(application)
+
+    private val _editingTrack = MutableStateFlow<Track?>(null)
+    val editingTrack: StateFlow<Track?> = _editingTrack.asStateFlow()
+    fun openMetadataEditor(track: Track) { _editingTrack.value = track }
+    fun closeMetadataEditor() { _editingTrack.value = null }
+
+    fun saveTrackMetadata(track: Track, metadata: Mp3Metadata) {
+        viewModelScope.launch {
+            val result = withContext(Dispatchers.IO) { Id3TagEditor.writeMetadata(getApplication(), track, metadata) }
+            result.onSuccess { updatedTrack ->
+                val updated = _allTracks.value.map { if (it.id == track.id) updatedTrack else it }
+                _allTracks.value = updated
+                MusicCatalog.saveTracks(getApplication(), updated)
+                playerManager.updateCurrentTrackMetadata(updatedTrack)
+                _editingTrack.value = null
+            }.onFailure { error -> Log.e("WinsAuraPlayer", "Metadata save failed", error) }
+        }
+    }
 
     private val _allTracks = MutableStateFlow<List<Track>>(MusicCatalog.getAllInitialTracks())
     val allTracks: StateFlow<List<Track>> = _allTracks.asStateFlow()
@@ -102,6 +125,16 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
 
         // Initialize AdMob SDK
         AdMobManager.initialize(application)
+
+        PlaybackService.onPlayPauseAction = { togglePlayPause() }
+        PlaybackService.onStopAction = { playerManager.stopPlayback() }
+        PlaybackService.onNextAction = { playNext() }
+        PlaybackService.onPrevAction = { playPrevious() }
+        viewModelScope.launch {
+            combine(currentTrack, isPlaying) { track, playing -> track to playing }
+                .distinctUntilChanged()
+                .collect { (track, playing) -> PlaybackService.updateState(application, track, playing) }
+        }
 
         playerManager.onTrackCompleted = {
             when (_repeatMode.value) {
@@ -250,6 +283,11 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     override fun onCleared() {
+        PlaybackService.onPlayPauseAction = null
+        PlaybackService.onStopAction = null
+        PlaybackService.onNextAction = null
+        PlaybackService.onPrevAction = null
+        PlaybackService.stopPlaybackService(getApplication())
         super.onCleared()
         playerManager.release()
     }

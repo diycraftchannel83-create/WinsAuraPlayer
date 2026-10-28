@@ -3,6 +3,7 @@ package com.example
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.os.Build
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -54,6 +55,7 @@ import com.example.ui.components.InterstitialAdDialog
 import com.example.ui.components.MiniPlayerBar
 import com.example.ui.screens.AiPlaylistScreen
 import com.example.ui.screens.DspEqualizerScreen
+import com.example.ui.screens.EditMetadataDialog
 import com.example.ui.screens.LibraryScreen
 import com.example.ui.screens.LrcStudioScreen
 import com.example.ui.screens.NowPlayingModal
@@ -102,6 +104,7 @@ fun MainAppContent(
     val interstitialAdVisible by viewModel.interstitialAdVisible.collectAsStateWithLifecycle()
     val isNowPlayingExpanded by viewModel.isNowPlayingExpanded.collectAsStateWithLifecycle()
     val isLrcStudioOpen by viewModel.isLrcStudioOpen.collectAsStateWithLifecycle()
+    val editingTrack by viewModel.editingTrack.collectAsStateWithLifecycle()
     val isScanningMedia by viewModel.isScanningMedia.collectAsStateWithLifecycle()
     val scanMessage by viewModel.scanMessage.collectAsStateWithLifecycle()
 
@@ -113,6 +116,13 @@ fun MainAppContent(
     ) { granted ->
         if (granted) viewModel.refreshVisualizer()
     }
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(contract = ActivityResultContracts.RequestPermission()) { }
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
     LaunchedEffect(currentTrack?.id) {
         if (currentTrack != null && !visualizerPermissionRequested &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED
@@ -317,7 +327,8 @@ fun MainAppContent(
                             onShowAd = { viewModel.showInterstitialAd() },
                             isDarkMode = isDarkMode,
                             onToggleTheme = { viewModel.toggleDarkMode() },
-                            onOpenLrcStudio = { viewModel.openLrcStudio() }
+                            onOpenLrcStudio = { viewModel.openLrcStudio() },
+                            onOpenMetadataEditor = { viewModel.openMetadataEditor(it) }
                         )
                     }
 
@@ -398,7 +409,8 @@ fun MainAppContent(
                     },
                     onDismiss = { viewModel.setNowPlayingExpanded(false) },
                     isDarkMode = isDarkMode,
-                    onToggleTheme = { viewModel.toggleDarkMode() }
+                    onToggleTheme = { viewModel.toggleDarkMode() },
+                    onOpenMetadataEditor = { viewModel.openMetadataEditor(it) }
                 )
             }
         }
@@ -420,6 +432,10 @@ fun MainAppContent(
                 onSaveLyrics = { lines -> viewModel.saveAndApplyLyrics(activeSong, lines) },
                 onClose = { viewModel.closeLrcStudio() }
             )
+        }
+
+        editingTrack?.let { trackToEdit ->
+            EditMetadataDialog(track = trackToEdit, onDismiss = { viewModel.closeMetadataEditor() }, onSave = { metadata -> viewModel.saveTrackMetadata(trackToEdit, metadata) })
         }
 
         // App Open Ad on launch with ID ca-app-pub-1254774552944426/9151767484

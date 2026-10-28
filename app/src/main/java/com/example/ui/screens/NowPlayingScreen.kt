@@ -130,6 +130,7 @@ fun NowPlayingScreen(
     isDarkMode: Boolean = true,
     onToggleTheme: () -> Unit = {},
     onOpenLrcStudio: () -> Unit = {},
+    onOpenMetadataEditor: (Track) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     if (track == null) {
@@ -559,44 +560,11 @@ fun NowPlayingScreen(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        // Track title & artist
+        // Opens the full WinsLyricEditor metadata editor.
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable {
-                    val values = mutableMapOf<String, String>()
-                    val retriever = MediaMetadataRetriever()
-                    try {
-                        retriever.setDataSource(context, Uri.parse(track.audioUrl))
-                        val fields = listOf(
-                            MediaMetadataRetriever.METADATA_KEY_TITLE to "Judul",
-                            MediaMetadataRetriever.METADATA_KEY_ARTIST to "Artis",
-                            MediaMetadataRetriever.METADATA_KEY_ALBUM to "Album",
-                            MediaMetadataRetriever.METADATA_KEY_ALBUMARTIST to "Artis Album",
-                            MediaMetadataRetriever.METADATA_KEY_COMPOSER to "Komposer",
-                            MediaMetadataRetriever.METADATA_KEY_WRITER to "Penulis",
-                            MediaMetadataRetriever.METADATA_KEY_GENRE to "Genre",
-                            MediaMetadataRetriever.METADATA_KEY_YEAR to "Tahun",
-                            MediaMetadataRetriever.METADATA_KEY_CD_TRACK_NUMBER to "Nomor Track",
-                            MediaMetadataRetriever.METADATA_KEY_DISC_NUMBER to "Nomor Disc",
-                            MediaMetadataRetriever.METADATA_KEY_BITRATE to "Bitrate",
-                            MediaMetadataRetriever.METADATA_KEY_MIMETYPE to "Format",
-                            MediaMetadataRetriever.METADATA_KEY_DURATION to "Durasi (ms)"
-                        )
-                        fields.forEach { (key, label) -> retriever.extractMetadata(key)?.let { values[label] = it } }
-                    } catch (_: Exception) {
-                        values["Info"] = "Tag tidak seluruhnya dapat dibaca."
-                    } finally {
-                        try { retriever.release() } catch (_: Exception) {}
-                    }
-                    values.putIfAbsent("Judul", track.title)
-                    values.putIfAbsent("Artis", track.artist)
-                    values.putIfAbsent("Album", track.album)
-                    editableTags.clear()
-                    editableTags.putAll(values)
-                    tagStatus = null
-                    showTagEditor = true
-                }
+                .clickable { onOpenMetadataEditor(track) }
         ) {
             Text(
                 text = displayTitle,
@@ -616,51 +584,7 @@ fun NowPlayingScreen(
             )
         }
 
-        if (showTagEditor) {
-            AlertDialog(
-                onDismissRequest = { showTagEditor = false },
-                title = { Text("Tag file lagu") },
-                text = {
-                    Column(modifier = Modifier.height(400.dp)) {
-                        androidx.compose.foundation.lazy.LazyColumn(modifier = Modifier.weight(1f)) {
-                            items(editableTags.keys.toList()) { label ->
-                                OutlinedTextField(
-                                    value = editableTags[label].orEmpty(),
-                                    onValueChange = { editableTags[label] = it },
-                                    label = { Text(label) },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    singleLine = true,
-                                    enabled = label in setOf("Judul", "Artis", "Album", "Artis Album", "Komposer", "Penulis", "Genre", "Tahun", "Nomor Track", "Nomor Disc")
-                                )
-                            }
-                        }
-                        tagStatus?.let { Text(it, color = MaterialTheme.colorScheme.primary) }
-                    }
-                },
-                confirmButton = {
-                    TextButton(onClick = {
-                        val values = editableTags.toMap()
-                        val uri = Uri.parse(track.audioUrl)
-                        try {
-                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R &&
-                                uri.scheme == "content" && uri.authority == "media"
-                            ) {
-                                pendingTagSave = values
-                                val request = MediaStore.createWriteRequest(context.contentResolver, listOf(uri))
-                                writePermissionLauncher.launch(
-                                    IntentSenderRequest.Builder(request.intentSender).build()
-                                )
-                            } else {
-                                savePhysicalTags(values)
-                            }
-                        } catch (e: Exception) {
-                            tagStatus = "Tidak dapat meminta izin menulis file: ${e.localizedMessage ?: "akses ditolak"}"
-                        }
-                    }) { Text("Simpan") }
-                },
-                dismissButton = { TextButton(onClick = { showTagEditor = false }) { Text("Close") } }
-            )
-        }
+
 
         Spacer(modifier = Modifier.height(8.dp))
 

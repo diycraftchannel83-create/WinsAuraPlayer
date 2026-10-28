@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Lyrics
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Repeat
@@ -116,6 +117,7 @@ fun NowPlayingModal(
     onDismiss: () -> Unit,
     isDarkMode: Boolean = true,
     onToggleTheme: () -> Unit = {},
+    onOpenMetadataEditor: (Track) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     BackHandler { onDismiss() }
@@ -226,6 +228,13 @@ fun NowPlayingModal(
                             tint = if (isDarkMode) AccentAmber else NeonCyan,
                             modifier = Modifier.size(24.dp)
                         )
+                    }
+
+                    IconButton(
+                        onClick = { onOpenMetadataEditor(track) },
+                        modifier = Modifier.testTag("modal_metadata_editor_button")
+                    ) {
+                        Icon(imageVector = Icons.Default.Edit, contentDescription = "Edit metadata lagu", tint = NeonCyan, modifier = Modifier.size(24.dp))
                     }
 
                     IconButton(
