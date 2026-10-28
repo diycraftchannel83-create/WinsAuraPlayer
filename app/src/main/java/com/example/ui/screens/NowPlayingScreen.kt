@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Lyrics
@@ -337,6 +338,19 @@ fun NowPlayingScreen(
                         imageVector = if (isDarkMode) Icons.Default.LightMode else Icons.Default.DarkMode,
                         contentDescription = if (isDarkMode) "Beralih ke Mode Terang" else "Beralih ke Mode Gelap",
                         tint = if (isDarkMode) AccentAmber else NeonCyan,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+
+                // Always-visible metadata editor action in the Now Playing header.
+                IconButton(
+                    onClick = { onOpenMetadataEditor(track) },
+                    modifier = Modifier.testTag("now_playing_metadata_editor_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Edit metadata lagu",
+                        tint = NeonCyan,
                         modifier = Modifier.size(24.dp)
                     )
                 }
