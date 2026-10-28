@@ -149,6 +149,19 @@ class AudioPlayerManager(private val context: Context) {
         _currentTrack.value = _currentTrack.value?.copy(lyricsLrc = lyricsLrc)
     }
 
+    fun updateCurrentTrackMetadata(updatedTrack: Track) {
+        if (_currentTrack.value?.id == updatedTrack.id) _currentTrack.value = updatedTrack
+    }
+
+    fun stopPlayback() {
+        releasePlayerOnly()
+        _currentTrack.value = null
+        _currentPositionMs.value = 0L
+        _durationMs.value = 0L
+        _isBuffering.value = false
+        _isPlaying.value = false
+    }
+
     fun pause() {
         val player = mediaPlayer ?: return
         if (!playerPrepared) return

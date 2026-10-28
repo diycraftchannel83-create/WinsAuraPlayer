@@ -20,6 +20,25 @@ object AudioCoverArtHelper {
         ).toString()
     }
 
+    fun loadTrackCoverBitmap(context: Context, track: com.example.model.Track): Bitmap {
+        try {
+            val cover = track.coverUrl
+            if (cover.isNotBlank()) {
+                val uri = Uri.parse(cover)
+                val bitmap = if (cover.startsWith("content://") || cover.startsWith("file://")) context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) } else if (!cover.startsWith("http")) BitmapFactory.decodeFile(cover) else null
+                if (bitmap != null) return bitmap
+            }
+        } catch (_: Exception) { }
+        val retriever = MediaMetadataRetriever()
+        try {
+            val audio = track.audioUrl
+            if (audio.startsWith("content://") || audio.startsWith("file://")) retriever.setDataSource(context, Uri.parse(audio)) else if (audio.startsWith("http")) retriever.setDataSource(audio, HashMap()) else if (audio.isNotBlank()) retriever.setDataSource(audio)
+            val bytes = retriever.embeddedPicture
+            if (bytes != null) BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.let { return it }
+        } catch (_: Exception) { } finally { try { retriever.release() } catch (_: Exception) { } }
+        return BitmapFactory.decodeResource(context.resources, com.example.R.mipmap.ic_launcher)
+    }
+
     suspend fun loadEmbeddedCoverArt(context: Context, audioUri: String): Bitmap? = withContext(Dispatchers.IO) {
         if (audioUri.isBlank()) return@withContext null
         memoryCache.get(audioUri)?.let { return@withContext it }
