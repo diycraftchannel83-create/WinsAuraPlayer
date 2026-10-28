@@ -14,7 +14,9 @@ import kotlinx.coroutines.withContext
 
 object AudioCoverArtHelper {
     private const val MAX_ART_SIZE = 512
-    private val memoryCache = LruCache<String, Bitmap>(8 * 1024 * 1024) { (it.byteCount / 1024).coerceAtLeast(1) }
+    private val memoryCache = object : LruCache<String, Bitmap>(8 * 1024) {
+        override fun sizeOf(key: String, value: Bitmap): Int = (value.byteCount / 1024).coerceAtLeast(1)
+    }
 
     fun getAlbumArtUriForAlbumId(albumId: Long): String {
         return ContentUris.withAppendedId(
