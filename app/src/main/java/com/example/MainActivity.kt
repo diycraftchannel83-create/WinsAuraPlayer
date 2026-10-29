@@ -51,6 +51,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import com.example.ads.AdMobManager
 import com.example.ui.components.AppOpenAdDialog
 import com.example.ui.components.BottomBannerAd
@@ -120,7 +121,7 @@ fun MainAppContent(
         activity?.window?.let { window ->
             val controller = WindowCompat.getInsetsController(window, window.decorView)
             if (isImmersivePlayer) {
-                controller.systemBarsBehavior = WindowInsetsCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
                 controller.hide(WindowInsetsCompat.Type.systemBars())
             } else {
                 controller.show(WindowInsetsCompat.Type.systemBars())
