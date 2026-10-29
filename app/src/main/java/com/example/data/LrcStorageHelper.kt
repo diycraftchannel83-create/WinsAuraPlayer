@@ -16,7 +16,7 @@ import java.io.IOException
  *
  * Android 10+: public files are accessed through MediaStore in the top-level
  * shared-storage folder "WinsLyric" (no broad storage permission required).
- * Android 9 and older: use the public external-storage directory directly.
+ * Android 9 and older: use the public Downloads/WinsLyric directory directly.
  * An internal copy is retained as a reliable app-private fallback.
  */
 object LrcStorageHelper {
@@ -41,8 +41,8 @@ object LrcStorageHelper {
     }
 
     /**
-     * Writes the canonical LRC to shared storage and an internal fallback.
-     * The returned File is the verified internal copy for existing callers.
+     * Writes the same LRC text to shared WinsLyric and an internal fallback.
+     * Returns the verified internal copy for existing LRC Studio callers.
      */
     fun saveLrcFile(
         context: Context,
@@ -53,28 +53,27 @@ object LrcStorageHelper {
         require(lrcContent.isNotBlank()) { "Konten lirik kosong." }
         val appContext = context.applicationContext
         val filename = buildLrcFilename(artist, title)
-        val normalizedContent = lrcContent.trimEnd() + "\n"
 
         val internalDir = File(appContext.filesDir, FOLDER_NAME)
         if (!internalDir.exists() && !internalDir.mkdirs()) {
             throw IOException("Folder internal WinsLyric tidak dapat dibuat.")
         }
         val internalFile = File(internalDir, filename)
-        internalFile.writeText(normalizedContent, Charsets.UTF_8)
-        check(internalFile.isFile && internalFile.readText(Charsets.UTF_8) == normalizedContent) {
+        internalFile.writeText(lrcContent, Charsets.UTF_8)
+        check(internalFile.isFile && internalFile.readText(Charsets.UTF_8) == lrcContent) {
             "File lirik internal gagal diverifikasi."
         }
 
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                writeSharedMediaStore(appContext, filename, normalizedContent)
+                writeSharedMediaStore(appContext, filename, lrcContent)
             } else {
                 val downloads = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
                 val publicDir = File(downloads, FOLDER_NAME)
                 if (!publicDir.exists() && !publicDir.mkdirs()) {
                     throw IOException("Folder publik WinsLyric tidak dapat dibuat.")
                 }
-                File(publicDir, filename).writeText(normalizedContent, Charsets.UTF_8)
+                File(publicDir, filename).writeText(lrcContent, Charsets.UTF_8)
             }
             Log.d(TAG, "LRC tersimpan di shared storage: $FOLDER_NAME/$filename")
         } catch (error: Exception) {
@@ -85,8 +84,7 @@ object LrcStorageHelper {
     }
 
     /**
-     * Reads the shared WinsLyric copy first, then the internal copy and legacy
-     * locations so existing users do not lose access to previously saved lyrics.
+     * Reads shared WinsLyric first, then the internal copy and legacy locations.
      */
     fun loadExistingLrc(context: Context, artist: String, title: String): String? {
         val appContext = context.applicationContext
@@ -108,14 +106,17 @@ object LrcStorageHelper {
             return try { internal.readText(Charsets.UTF_8) } catch (_: IOException) { null }
         }
 
-        // Backward compatibility with previous versions' folder names.
-        val legacyInternal = File(File(appContext.filesDir, "winsplayerlrc"), filename)
-        if (legacyInternal.isFile && legacyInternal.length() > 0L) {
-            return try { legacyInternal.readText(Charsets.UTF_8) } catch (_: IOException) { null }
+        // Preserve lyrics saved by previous versions.
+        val legacyStudio = File(File(appContext.filesDir, "winsplayerlrc"), filename)
+        if (legacyStudio.isFile && legacyStudio.length() > 0L) {
+            return try { legacyStudio.readText(Charsets.UTF_8) } catch (_: IOException) { null }
         }
-        val oldOnline = File(File(appContext.filesDir, "WinsLirik"), filename)
-        if (oldOnline.isFile && oldOnline.length() > 0L) {
-            return try { oldOnline.readText(Charsets.UTF_8) } catch (_: IOException) { null }
+
+        val safeArtist = sanitizeFilename(if (artist.isBlank()) "Unknown track" else artist)
+        val safeTitle = sanitizeFilename(if (title.isBlank()) "Unknown track" else title)
+        val legacyOnline = File(File(appContext.filesDir, "WinsLirik"), "$safeArtist - $safeTitle.lrc")
+        if (legacyOnline.isFile && legacyOnline.length() > 0L) {
+            return try { legacyOnline.readText(Charsets.UTF_8) } catch (_: IOException) { null }
         }
         return null
     }
@@ -146,11 +147,9 @@ object LrcStorageHelper {
                 output.flush()
             } ?: throw IOException("Tidak dapat membuka file lirik untuk ditulis.")
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                resolver.update(uri, ContentValues().apply {
-                    put(MediaStore.MediaColumns.IS_PENDING, 0)
-                }, null, null)
-            }
+            resolver.update(uri, ContentValues().apply {
+                put(MediaStore.MediaColumns.IS_PENDING, 0)
+            }, null, null)
         } catch (error: Exception) {
             if (existing == null) {
                 try { resolver.delete(uri, null, null) } catch (_: Exception) { }
