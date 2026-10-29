@@ -186,6 +186,16 @@ fun NowPlayingScreen(
     var pendingTagSave by remember(track.id) { mutableStateOf<Map<String, String>?>(null) }
     val tagSaveScope = androidx.compose.runtime.rememberCoroutineScope()
     val editableTags = remember(track.id) { androidx.compose.runtime.mutableStateMapOf<String, String>() }
+    // Metadata editor updates the Track with the same ID; observe its fields too so
+    // Now Playing refreshes immediately after a successful tag write.
+    LaunchedEffect(track.title, track.artist, track.album) {
+        displayTitle = track.title
+        displayArtist = track.artist
+        displayAlbum = track.album
+        editableTags["Judul"] = track.title
+        editableTags["Artis"] = track.artist
+        editableTags["Album"] = track.album
+    }
 
     fun savePhysicalTags(values: Map<String, String>) {
         tagStatus = "Menyimpan tag langsung ke file audio…"
@@ -267,6 +277,11 @@ fun NowPlayingScreen(
         context.getSharedPreferences("wins_aura_settings", android.content.Context.MODE_PRIVATE)
             .getInt("lyrics_sync_offset_ms", 0).toLong()
     }
+    val currentLyricLine = remember(parsedLyrics, currentPositionMs, lyricsSyncOffsetMs) {
+        val lyricPosition = (currentPositionMs + lyricsSyncOffsetMs).coerceAtLeast(0L)
+        parsedLyrics.lastOrNull { it.timestampMs <= lyricPosition }?.text
+            ?: parsedLyrics.firstOrNull()?.text.orEmpty()
+    }
 
     Box(
         modifier = modifier
@@ -322,13 +337,6 @@ fun NowPlayingScreen(
                     fontWeight = FontWeight.Bold,
                     color = TextTertiary,
                     letterSpacing = 1.sp
-                )
-                Text(
-                    text = displayAlbum,
-                    fontSize = 13.sp,
-                    color = TextSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
                 )
             }
 
@@ -579,32 +587,85 @@ fun NowPlayingScreen(
                     }
                 }
             }
+
+            // Keep the current lyric visible over the cover artwork, in the highlighted
+            // center area, even when the Sampul tab is selected.
+            if (centerMode == CenterDisplayMode.ALBUM_ART && currentLyricLine.isNotBlank()) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .padding(horizontal = 10.dp, vertical = 8.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(StudioDarkBg.copy(alpha = 0.82f))
+                        .border(1.dp, NeonCyan.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = currentLyricLine,
+                        color = NeonCyan,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                }
+            }
         }
 
         Spacer(modifier = Modifier.height(10.dp))
 
         // Opens the full WinsLyricEditor metadata editor.
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { onOpenMetadataEditor(track) }
+                .clickable { onOpenMetadataEditor(track) },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(
-                text = displayTitle,
-                modifier = Modifier.fillMaxWidth(),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = TextPrimary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = displayArtist,
-                style = MaterialTheme.typography.bodyMedium,
-                color = NeonCyan,
-                fontWeight = FontWeight.SemiBold
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = displayTitle,
+                    modifier = Modifier.fillMaxWidth(),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = displayArtist,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = NeonCyan,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Column(
+                modifier = Modifier.weight(0.85f),
+                horizontalAlignment = Alignment.End
+            ) {
+                Text(
+                    text = "ALBUM",
+                    color = TextTertiary,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.sp
+                )
+                Text(
+                    text = displayAlbum.ifBlank { "Album tidak diketahui" },
+                    color = AccentAmber,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.End
+                )
+            }
         }
 
 
