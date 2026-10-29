@@ -159,16 +159,14 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun playTrack(track: Track) {
-        val previousTrack = currentTrack.value
-        if (_isLrcStudioOpen.value && previousTrack != null && previousTrack.id != track.id) {
-            val draft = lrcStudioDraft
-            if (draft != null && draft.first.id == previousTrack.id && draft.second.isNotEmpty()) {
-                try {
-                    // Persist the outgoing song's synchronized lyrics before changing Now Playing.
-                    saveAndApplyLyrics(draft.first, draft.second)
-                } catch (error: Exception) {
-                    Log.e("WinsAuraPlayer", "LRC autosave before track change failed", error)
-                }
+        // Persist the latest editor draft for its original track before switching Now Playing.
+        // Do not rely on currentTrack/UI recomposition timing: a fast Next action can arrive first.
+        val draft = lrcStudioDraft
+        if (draft != null && draft.first.id != track.id && draft.second.isNotEmpty()) {
+            try {
+                saveAndApplyLyrics(draft.first, draft.second)
+            } catch (error: Exception) {
+                Log.e("WinsAuraPlayer", "LRC autosave before track change failed", error)
             }
         }
         val saved = LrcStorageHelper.loadExistingLrc(getApplication(), track.artist, track.title)
