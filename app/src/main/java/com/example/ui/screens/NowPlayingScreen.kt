@@ -132,6 +132,7 @@ fun NowPlayingScreen(
     onToggleTheme: () -> Unit = {},
     onOpenLrcStudio: () -> Unit = {},
     onOpenMetadataEditor: (Track) -> Unit = {},
+    onImmersiveModeChanged: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     if (track == null) {
@@ -160,6 +161,8 @@ fun NowPlayingScreen(
     }
 
     var centerMode by remember { mutableStateOf(CenterDisplayMode.ALBUM_ART) }
+    var fullScreenStage by remember { mutableStateOf(FullScreenStage.NORMAL) }
+    LaunchedEffect(fullScreenStage) { onImmersiveModeChanged(fullScreenStage != FullScreenStage.NORMAL) }
     var isShuffle by remember { mutableStateOf(false) }
 
     val infiniteTransition = rememberInfiniteTransition(label = "screen_disc_rotation")
@@ -441,7 +444,13 @@ fun NowPlayingScreen(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f),
+                .weight(1f)
+                .clickable {
+                    if (fullScreenStage == FullScreenStage.NORMAL) {
+                        fullScreenStage = FullScreenStage.COVER
+                    }
+                }
+                .testTag("now_playing_center_visual_area"),
             contentAlignment = Alignment.Center
         ) {
             when (centerMode) {
@@ -805,7 +814,66 @@ fun NowPlayingScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
     }
-}
+
+        // Immersive three-stage player: cover + synced lyrics -> visualizer + lyrics -> normal UI.
+        if (fullScreenStage != FullScreenStage.NORMAL) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFF050811))
+                    .clickable {
+                        fullScreenStage = when (fullScreenStage) {
+                            FullScreenStage.NORMAL -> FullScreenStage.COVER
+                            FullScreenStage.COVER -> FullScreenStage.VISUALIZER
+                            FullScreenStage.VISUALIZER -> FullScreenStage.NORMAL
+                        }
+                    }
+                    .testTag("immersive_player_overlay"),
+                contentAlignment = Alignment.Center
+            ) {
+                if (fullScreenStage == FullScreenStage.COVER) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(0.88f)
+                            .aspectRatio(1f)
+                            .align(Alignment.Center)
+                            .shadow(24.dp, CircleShape)
+                            .clip(CircleShape)
+                            .border(3.dp, NeonCyan.copy(alpha = 0.8f), CircleShape)
+                            .rotate(if (isPlaying) rotationAngle else 0f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        AudioCoverImage(
+                            track = track,
+                            contentDescription = "Sampul album berputar",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .background(StudioDarkBg, CircleShape)
+                                .border(2.dp, NeonCyan, CircleShape)
+                        )
+                    }
+                } else {
+                    AudioVisualizerView(
+                        amplitudes = amplitudes,
+                        mode = visualizerMode,
+                        isPlaying = isPlaying,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+
+                SynchronizedLyricsView(
+                    lyrics = parsedLyrics,
+                    currentPositionMs = (currentPositionMs + lyricsSyncOffsetMs).coerceAtLeast(0L),
+                    onSeekToTimestamp = onSeekTo,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        }
+    }
 }
 
 
@@ -896,3 +964,5 @@ private fun formatDuration(ms: Long): String {
     val sec = totalSec % 60
     return "%d:%02d".format(min, sec)
 }
+
+private enum class FullScreenStage { NORMAL, COVER, VISUALIZER }
