@@ -114,8 +114,42 @@ fun MainAppContent(
     val lrcSaveMessage by viewModel.lrcSaveMessage.collectAsStateWithLifecycle()
     val metadataSaveMessage by viewModel.metadataSaveMessage.collectAsStateWithLifecycle()
 
-    // Android's audio-session Visualizer requires RECORD_AUDIO permission on many devices.
+    // Request audio-library access on first launch. Android 10+ uses scoped storage:
+    // broad write access is not available; editing protected MediaStore files needs a per-file grant.
     val context = LocalContext.current
+    val storagePermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { grants ->
+        val audioReadGranted = grants.values.any { it } ||
+            (Build.VERSION.SDK_INT >= 33 &&
+                ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_AUDIO) == PackageManager.PERMISSION_GRANTED) ||
+            (Build.VERSION.SDK_INT < 33 &&
+                ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)
+        if (!audioReadGranted) {
+            Toast.makeText(
+                context,
+                "Izin akses audio diperlukan untuk membaca koleksi musik dan lirik. Aktifkan izin melalui Pengaturan aplikasi.",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+    LaunchedEffect(Unit) {
+        val prefs = context.getSharedPreferences("wins_aura_permissions", android.content.Context.MODE_PRIVATE)
+        val readPermission = if (Build.VERSION.SDK_INT >= 33) {
+            Manifest.permission.READ_MEDIA_AUDIO
+        } else {
+            Manifest.permission.READ_EXTERNAL_STORAGE
+        }
+        val required = mutableListOf(readPermission)
+        if (Build.VERSION.SDK_INT <= 28) required.add(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        val missing = required.filter {
+            ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
+        }
+        if (missing.isNotEmpty() && !prefs.getBoolean("first_launch_storage_prompted", false)) {
+            prefs.edit().putBoolean("first_launch_storage_prompted", true).apply()
+            storagePermissionLauncher.launch(missing.toTypedArray())
+        }
+    }
     var isImmersivePlayer by remember { mutableStateOf(false) }
     LaunchedEffect(isImmersivePlayer) {
         val activity = context as? ComponentActivity
