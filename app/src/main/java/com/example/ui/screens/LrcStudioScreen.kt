@@ -555,77 +555,90 @@ fun LrcStudioScreen(
 
                         Spacer(modifier = Modifier.height(10.dp))
 
-                        // Fine tune & Navigation Controls
+                        // Fine tune & Navigation Controls: keep all six actions in one aligned row.
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // Previous line
                             OutlinedButton(
-                                onClick = {
-                                    if (activeLineIndex > 0) activeLineIndex--
-                                },
+                                onClick = { if (activeLineIndex > 0) activeLineIndex-- },
                                 enabled = activeLineIndex > 0,
-                                shape = RoundedCornerShape(8.dp),
+                                shape = RoundedCornerShape(7.dp),
+                                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 8.dp),
                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
-                                modifier = Modifier.testTag("prev_line_button")
+                                modifier = Modifier.weight(1f).testTag("prev_line_button")
                             ) {
-                                Icon(Icons.Default.SkipPrevious, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Text("Kembali", fontSize = 11.sp)
+                                Icon(Icons.Default.SkipPrevious, contentDescription = null, modifier = Modifier.size(13.dp))
+                                Text("Kembali", fontSize = 9.sp, maxLines = 1)
                             }
 
-                            // Offset fine-tunes: -0.5s and +0.5s
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Box(
-                                    modifier = Modifier
-                                        .background(StudioCardElevated, RoundedCornerShape(6.dp))
-                                        .border(1.dp, DividerColor, RoundedCornerShape(6.dp))
-                                        .clickable {
-                                            if (currentLine != null && currentLine.timestampMs > 0L) {
-                                                val updated = lines.toMutableList()
-                                                val newTime = (currentLine.timestampMs - 500L).coerceAtLeast(0L)
-                                                updated[activeLineIndex] = currentLine.copy(timestampMs = newTime)
-                                                updateLines(updated)
-                                            }
-                                        }
-                                        .padding(horizontal = 8.dp, vertical = 6.dp)
-                                        .testTag("offset_minus_500ms")
-                                ) {
-                                    Text("-0.5s", color = AccentAmber, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                }
-
-                                Box(
-                                    modifier = Modifier
-                                        .background(StudioCardElevated, RoundedCornerShape(6.dp))
-                                        .border(1.dp, DividerColor, RoundedCornerShape(6.dp))
-                                        .clickable {
-                                            if (currentLine != null && currentLine.timestampMs > 0L) {
-                                                val updated = lines.toMutableList()
-                                                val newTime = currentLine.timestampMs + 500L
-                                                updated[activeLineIndex] = currentLine.copy(timestampMs = newTime)
-                                                updateLines(updated)
-                                            }
-                                        }
-                                        .padding(horizontal = 8.dp, vertical = 6.dp)
-                                        .testTag("offset_plus_500ms")
-                                ) {
-                                    Text("+0.5s", color = NeonCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                }
-                            }
-
-                            // Next / Skip line
-                            OutlinedButton(
+                            OffsetAdjustButton(
+                                label = "-0.3s",
+                                tint = AccentAmber,
+                                testTag = "offset_minus_300ms",
                                 onClick = {
-                                    if (activeLineIndex < lines.lastIndex) activeLineIndex++
+                                    if (currentLine != null && currentLine.timestampMs > 0L) {
+                                        val updated = lines.toMutableList()
+                                        updated[activeLineIndex] = currentLine.copy(timestampMs = (currentLine.timestampMs - 300L).coerceAtLeast(0L))
+                                        updateLines(updated)
+                                    }
                                 },
+                                modifier = Modifier.weight(0.72f)
+                            )
+
+                            OffsetAdjustButton(
+                                label = "-0.5s",
+                                tint = AccentAmber,
+                                testTag = "offset_minus_500ms",
+                                onClick = {
+                                    if (currentLine != null && currentLine.timestampMs > 0L) {
+                                        val updated = lines.toMutableList()
+                                        updated[activeLineIndex] = currentLine.copy(timestampMs = (currentLine.timestampMs - 500L).coerceAtLeast(0L))
+                                        updateLines(updated)
+                                    }
+                                },
+                                modifier = Modifier.weight(0.72f)
+                            )
+
+                            OffsetAdjustButton(
+                                label = "+0.5s",
+                                tint = NeonCyan,
+                                testTag = "offset_plus_500ms",
+                                onClick = {
+                                    if (currentLine != null && currentLine.timestampMs > 0L) {
+                                        val updated = lines.toMutableList()
+                                        updated[activeLineIndex] = currentLine.copy(timestampMs = currentLine.timestampMs + 500L)
+                                        updateLines(updated)
+                                    }
+                                },
+                                modifier = Modifier.weight(0.72f)
+                            )
+
+                            OffsetAdjustButton(
+                                label = "+0.3s",
+                                tint = NeonCyan,
+                                testTag = "offset_plus_300ms",
+                                onClick = {
+                                    if (currentLine != null && currentLine.timestampMs > 0L) {
+                                        val updated = lines.toMutableList()
+                                        updated[activeLineIndex] = currentLine.copy(timestampMs = currentLine.timestampMs + 300L)
+                                        updateLines(updated)
+                                    }
+                                },
+                                modifier = Modifier.weight(0.72f)
+                            )
+
+                            OutlinedButton(
+                                onClick = { if (activeLineIndex < lines.lastIndex) activeLineIndex++ },
                                 enabled = activeLineIndex < lines.lastIndex,
-                                shape = RoundedCornerShape(8.dp),
+                                shape = RoundedCornerShape(7.dp),
+                                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 8.dp),
                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
-                                modifier = Modifier.testTag("skip_line_button")
+                                modifier = Modifier.weight(1f).testTag("skip_line_button")
                             ) {
-                                Text("Lewati", fontSize = 11.sp)
-                                Icon(Icons.Default.SkipNext, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Text("Lewati", fontSize = 9.sp, maxLines = 1)
+                                Icon(Icons.Default.SkipNext, contentDescription = null, modifier = Modifier.size(13.dp))
                             }
                         }
                     }
@@ -1003,4 +1016,26 @@ private fun formatDigitalTime(ms: Long): String {
     val sec = totalSec % 60
     val min = totalSec / 60
     return "%02d:%02d.%02d".format(min, sec, hundredths)
+}
+
+
+@Composable
+private fun OffsetAdjustButton(
+    label: String,
+    tint: Color,
+    testTag: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .background(StudioCardElevated, RoundedCornerShape(6.dp))
+            .border(1.dp, DividerColor, RoundedCornerShape(6.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 1.dp, vertical = 10.dp)
+            .testTag(testTag),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(label, color = tint, fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+    }
 }
