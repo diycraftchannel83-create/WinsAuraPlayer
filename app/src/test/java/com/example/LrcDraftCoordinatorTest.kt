@@ -31,7 +31,7 @@ class LrcDraftCoordinatorTest {
         coordinator.update(original, lines)
         var savedTrackId: String? = null
 
-        val canSwitch = coordinator.savePending { source, savedLines ->
+        val canSwitch = coordinator.saveBeforeTrackSwitch { source, savedLines ->
             savedTrackId = source.id
             assertEquals(lines, savedLines)
             true
@@ -48,7 +48,7 @@ class LrcDraftCoordinatorTest {
         val original = track("two")
         coordinator.update(original, lines)
 
-        val canSwitch = coordinator.savePending { _, _ -> false }
+        val canSwitch = coordinator.saveBeforeTrackSwitch { _, _ -> false }
 
         assertFalse(canSwitch)
         assertNotNull(coordinator.pending())
@@ -61,10 +61,10 @@ class LrcDraftCoordinatorTest {
         val coordinator = LrcDraftCoordinator()
         coordinator.update(track("three"), lines)
 
-        assertFalse(coordinator.savePending { _, _ -> throw IllegalStateException("disk full") })
+        assertFalse(coordinator.saveBeforeTrackSwitch { _, _ -> throw IllegalStateException("disk full") })
         assertNotNull(coordinator.pending())
 
-        assertTrue(coordinator.savePending { _, _ -> true })
+        assertTrue(coordinator.saveBeforeTrackSwitch { _, _ -> true })
         assertNull(coordinator.pending())
     }
 
@@ -73,10 +73,10 @@ class LrcDraftCoordinatorTest {
         val coordinator = LrcDraftCoordinator()
         coordinator.update(track("four"), lines)
 
-        assertFalse(coordinator.savePending { _, _ -> false })
+        assertFalse(coordinator.saveBeforeEditorClose { _, _ -> false })
         assertNotNull(coordinator.pending())
 
-        assertTrue(coordinator.savePending { _, _ -> true })
+        assertTrue(coordinator.saveBeforeEditorClose { _, _ -> true })
         assertNull(coordinator.pending())
     }
 
@@ -87,7 +87,7 @@ class LrcDraftCoordinatorTest {
         coordinator.update(original, lines)
         val newerLines = listOf(LyricsLine(2_500L, "Newer draft"))
 
-        val saved = coordinator.savePending { _, _ ->
+        val saved = coordinator.saveBeforeTrackSwitch { _, _ ->
             coordinator.update(original, newerLines)
             true
         }
