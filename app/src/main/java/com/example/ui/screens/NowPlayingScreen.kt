@@ -361,7 +361,7 @@ fun NowPlayingScreen(
                             CenterDisplayMode.ALBUM_ART -> {
                                 Box(Modifier.size(minOf(maxWidth * 0.94f, maxHeight * 0.88f)).shadow(22.dp, CircleShape).clip(CircleShape)
                                     .border(3.dp, NeonCyan, CircleShape).rotate(if (isPlaying) rotationAngle else 0f), contentAlignment = Alignment.Center) {
-                                    AudioCoverImage(track, track.title, ContentScale.Crop, Modifier.fillMaxSize())
+                                    AudioCoverImage(track = track, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop, contentDescription = track.title)
                                     Box(Modifier.size(34.dp).background(StudioDarkBg, CircleShape).border(2.dp, NeonCyan, CircleShape))
                                 }
                                 if (currentLyricLine.isNotBlank()) {
@@ -397,7 +397,7 @@ fun NowPlayingScreen(
                             }
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Icon(Icons.Default.MusicNote, "Album", tint = TextSecondary)
-                                AudioCoverImage(track, "Sampul album", ContentScale.Crop, Modifier.padding(top = 4.dp).size(72.dp).clip(RoundedCornerShape(9.dp)))
+                                AudioCoverImage(track = track, modifier = Modifier.padding(top = 4.dp).size(72.dp).clip(RoundedCornerShape(9.dp)), contentScale = ContentScale.Crop, contentDescription = "Sampul album")
                             }
                         }
                         Spacer(Modifier.height(10.dp))
