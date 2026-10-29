@@ -135,7 +135,7 @@ fun LrcStudioScreen(
     // Next/Previous action from switching tracks before the last sync timestamp reaches the ViewModel.
     SideEffect { onDraftChanged(track, lines.toList()) }
     fun updateLines(updatedLines: List<LyricsLine>) {
-        updateLines(updated)Lines
+        lines = updatedLines
         onDraftChanged(track, updatedLines.toList())
     }
     val latestSaveLyrics = rememberUpdatedState(onSaveLyrics)
