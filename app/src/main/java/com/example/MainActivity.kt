@@ -49,6 +49,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import com.example.ads.AdMobManager
 import com.example.ui.components.AppOpenAdDialog
 import com.example.ui.components.BottomBannerAd
@@ -113,6 +115,18 @@ fun MainAppContent(
     // Android's audio-session Visualizer requires RECORD_AUDIO permission on many devices.
     val context = LocalContext.current
     var isImmersivePlayer by remember { mutableStateOf(false) }
+    LaunchedEffect(isImmersivePlayer) {
+        val activity = context as? ComponentActivity
+        activity?.window?.let { window ->
+            val controller = WindowCompat.getInsetsController(window, window.decorView)
+            if (isImmersivePlayer) {
+                controller.systemBarsBehavior = WindowInsetsCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                controller.hide(WindowInsetsCompat.Type.systemBars())
+            } else {
+                controller.show(WindowInsetsCompat.Type.systemBars())
+            }
+        }
+    }
     LaunchedEffect(lrcSaveMessage) {
         val message = lrcSaveMessage
         if (!message.isNullOrBlank()) {
