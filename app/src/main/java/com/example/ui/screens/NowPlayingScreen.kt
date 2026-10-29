@@ -1000,6 +1000,7 @@ fun NowPlayingScreen(
         Spacer(modifier = Modifier.height(8.dp))
     }
         }
+        }
 
         // Immersive three-stage player: cover + synced lyrics -> visualizer + lyrics -> normal UI.
         if (fullScreenStage != FullScreenStage.NORMAL) {
