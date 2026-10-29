@@ -181,6 +181,11 @@ fun NowPlayingScreen(
     var displayTitle by remember(track.id) { mutableStateOf(track.title) }
     var displayArtist by remember(track.id) { mutableStateOf(track.artist) }
     var displayAlbum by remember(track.id) { mutableStateOf(track.album) }
+    var showTagEditor by remember(track.id) { mutableStateOf(false) }
+    var tagStatus by remember(track.id) { mutableStateOf<String?>(null) }
+    var pendingTagSave by remember(track.id) { mutableStateOf<Map<String, String>?>(null) }
+    val tagSaveScope = androidx.compose.runtime.rememberCoroutineScope()
+    val editableTags = remember(track.id) { androidx.compose.runtime.mutableStateMapOf<String, String>() }
     // Metadata editor updates the Track with the same ID; observe its fields too so
     // Now Playing refreshes immediately after a successful tag write.
     LaunchedEffect(track.title, track.artist, track.album) {
@@ -191,11 +196,6 @@ fun NowPlayingScreen(
         editableTags["Artis"] = track.artist
         editableTags["Album"] = track.album
     }
-    var showTagEditor by remember(track.id) { mutableStateOf(false) }
-    var tagStatus by remember(track.id) { mutableStateOf<String?>(null) }
-    var pendingTagSave by remember(track.id) { mutableStateOf<Map<String, String>?>(null) }
-    val tagSaveScope = androidx.compose.runtime.rememberCoroutineScope()
-    val editableTags = remember(track.id) { androidx.compose.runtime.mutableStateMapOf<String, String>() }
 
     fun savePhysicalTags(values: Map<String, String>) {
         tagStatus = "Menyimpan tag langsung ke file audio…"
