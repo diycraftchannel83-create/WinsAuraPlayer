@@ -283,22 +283,42 @@ object Id3TagEditor {
     }
 
     private fun validateWrittenFile(context: Context, uri: Uri, metadata: Mp3Metadata): Boolean {
-        val header = ByteArray(10)
-        val headerRead = openAudioInput(context, uri).use { readUpTo(it, header) }
-        if (headerRead != 10 || header[0] != 'I'.code.toByte() ||
-            header[1] != 'D'.code.toByte() || header[2] != '3'.code.toByte()) return false
+        // Validate the bytes currently stored by the provider, not a potentially stale
+        // MediaStore/MediaMetadataRetriever cache for the original content:// URI.
+        val verificationCopy = File.createTempFile("id3-verify-", ".mp3", context.cacheDir)
+        try {
+            openAudioInput(context, uri).use { input ->
+                FileOutputStream(verificationCopy).use { output ->
+                    input.copyTo(output, DEFAULT_BUFFER_SIZE)
+                    output.fd.sync()
+                }
+            }
 
-        val retriever = MediaMetadataRetriever()
-        return try {
-            retriever.setDataSource(context, uri)
-            val duration = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L
-            val actualTitle = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE)
-            duration > 0L && (metadata.title.isBlank() || actualTitle == metadata.title)
+            val header = ByteArray(10)
+            FileInputStream(verificationCopy).use { input ->
+                val headerRead = readUpTo(input, header)
+                if (headerRead != 10 || header[0] != 'I'.code.toByte() ||
+                    header[1] != 'D'.code.toByte() || header[2] != '3'.code.toByte()) return false
+            }
+
+            val retriever = MediaMetadataRetriever()
+            return try {
+                // A local staged copy avoids stale metadata returned for content:// URIs.
+                retriever.setDataSource(verificationCopy.absolutePath)
+                val duration = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L
+                val actualTitle = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE)
+                duration > 0L && (metadata.title.isBlank() || actualTitle == metadata.title)
+            } catch (error: Exception) {
+                Log.w(TAG, "Cannot verify MP3 playback metadata for $uri: ${error.message}")
+                false
+            } finally {
+                try { retriever.release() } catch (_: Exception) { }
+            }
         } catch (error: Exception) {
-            Log.w(TAG, "Cannot verify MP3 playback metadata for $uri: ${error.message}")
-            false
+            Log.w(TAG, "Cannot read back written MP3 bytes for $uri: ${error.message}")
+            return false
         } finally {
-            try { retriever.release() } catch (_: Exception) { }
+            verificationCopy.delete()
         }
     }
 
