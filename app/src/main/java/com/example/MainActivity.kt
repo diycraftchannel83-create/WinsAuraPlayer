@@ -112,6 +112,7 @@ fun MainAppContent(
 
     // Android's audio-session Visualizer requires RECORD_AUDIO permission on many devices.
     val context = LocalContext.current
+    var isImmersivePlayer by remember { mutableStateOf(false) }
     LaunchedEffect(lrcSaveMessage) {
         val message = lrcSaveMessage
         if (!message.isNullOrBlank()) {
@@ -144,6 +145,7 @@ fun MainAppContent(
     Box(modifier = Modifier.fillMaxSize().background(androidx.compose.material3.MaterialTheme.colorScheme.background)) {
         Scaffold(
             bottomBar = {
+                if (!isImmersivePlayer) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -307,6 +309,7 @@ fun MainAppContent(
                         )
                     }
                 }
+                }
             },
             containerColor = androidx.compose.material3.MaterialTheme.colorScheme.background
         ) { innerPadding ->
@@ -337,7 +340,8 @@ fun MainAppContent(
                             isDarkMode = isDarkMode,
                             onToggleTheme = { viewModel.toggleDarkMode() },
                             onOpenLrcStudio = { viewModel.openLrcStudio() },
-                            onOpenMetadataEditor = { viewModel.openMetadataEditor(it) }
+                            onOpenMetadataEditor = { viewModel.openMetadataEditor(it) },
+                            onImmersiveModeChanged = { isImmersivePlayer = it }
                         )
                     }
 
