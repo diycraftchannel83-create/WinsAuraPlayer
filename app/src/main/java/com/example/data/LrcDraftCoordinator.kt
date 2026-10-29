@@ -24,7 +24,7 @@ class LrcDraftCoordinator {
     @Synchronized
     fun clearSavedDraft(track: Track, lines: List<LyricsLine>) {
         val current = pendingDraft
-        if (current?.track?.id == track.id && current.lines == lines) pendingDraft = null
+        if (current != null && current.track.id == track.id && current.lines == lines) pendingDraft = null
     }
 
     fun saveBeforeTrackSwitch(persist: (Track, List<LyricsLine>) -> Boolean): Boolean =
