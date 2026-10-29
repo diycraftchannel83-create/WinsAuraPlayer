@@ -257,7 +257,10 @@ fun NowPlayingScreen(
         }
     }
 
-    LaunchedEffect(track.id, lyricsRetryCount) {
+    // Refresh the visible lyric source when LRC Studio saves new timestamps for
+    // the same track. Keying only by track.id left the previous lyric text/timing
+    // cached in Now Playing, so playback appeared out of sync after saving.
+    LaunchedEffect(track.id, track.lyricsLrc, lyricsRetryCount) {
         if (track.lyricsLrc.isNotBlank()) {
             onlineLyrics = track.lyricsLrc
             isLoadingLyrics = false
