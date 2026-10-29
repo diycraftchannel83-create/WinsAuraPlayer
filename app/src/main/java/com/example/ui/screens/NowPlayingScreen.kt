@@ -11,6 +11,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -452,7 +453,7 @@ fun NowPlayingScreen(
         Spacer(modifier = Modifier.height(12.dp))
 
         // Center Content Area: Album Art / Visualizer / Lyrics
-        Box(
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
@@ -468,8 +469,9 @@ fun NowPlayingScreen(
                 CenterDisplayMode.ALBUM_ART -> {
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth(0.82f)
-                            .aspectRatio(1f)
+                            // In landscape, constrain the square cover by BOTH available
+                            // width and height so it cannot push playback controls off-screen.
+                            .size(minOf(maxWidth * 0.82f, maxHeight * 0.88f))
                             .shadow(20.dp, shape = CircleShape)
                             .clip(CircleShape)
                             .border(3.5.dp, NeonCyan.copy(alpha = 0.45f), CircleShape)
@@ -881,7 +883,7 @@ fun NowPlayingScreen(
 
         // Immersive three-stage player: cover + synced lyrics -> visualizer + lyrics -> normal UI.
         if (fullScreenStage != FullScreenStage.NORMAL) {
-            Box(
+            BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color(0xFF050811))
@@ -898,8 +900,8 @@ fun NowPlayingScreen(
                 if (fullScreenStage == FullScreenStage.COVER) {
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth(0.88f)
-                            .aspectRatio(1f)
+                            // Keep immersive artwork inside the screen bounds in landscape too.
+                            .size(minOf(maxWidth * 0.88f, maxHeight * 0.82f))
                             .align(Alignment.Center)
                             .shadow(24.dp, CircleShape)
                             .clip(CircleShape)
