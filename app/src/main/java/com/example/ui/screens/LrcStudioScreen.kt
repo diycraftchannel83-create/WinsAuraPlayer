@@ -67,7 +67,6 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -127,9 +126,10 @@ fun LrcStudioScreen(
         mutableStateOf(parsed)
     }
 
-    // Publish every edit to the ViewModel. All exits (track changes and close) use the
-    // ViewModel's save guard, which keeps the draft until storage confirms success.
-    SideEffect { onDraftChanged(track, lines.toList()) }
+    // Publish the initial draft when a track enters the editor. Subsequent edits are
+    // published immediately by updateLines(), avoiding stale drafts being re-added on
+    // unrelated recompositions while the editor is closing.
+    LaunchedEffect(track.id) { onDraftChanged(track, lines.toList()) }
     fun updateLines(updatedLines: List<LyricsLine>) {
         lines = updatedLines
         onDraftChanged(track, updatedLines.toList())
