@@ -255,6 +255,10 @@ object Id3TagEditor {
                     Log.e(TAG, "Critical: failed to restore original audio file $uri", rollbackError)
                 }
             }
+            if (error is SecurityException) {
+                // Preserve the security exception so the UI can request a user-approved write grant.
+                throw error
+            }
             return false
         } finally {
             staged.delete()
