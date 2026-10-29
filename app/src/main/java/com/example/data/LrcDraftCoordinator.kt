@@ -26,6 +26,12 @@ class LrcDraftCoordinator {
         if (pendingDraft?.track?.id == trackId) pendingDraft = null
     }
 
+    fun saveBeforeTrackSwitch(persist: (Track, List<LyricsLine>) -> Boolean): Boolean =
+        savePending(persist)
+
+    fun saveBeforeEditorClose(persist: (Track, List<LyricsLine>) -> Boolean): Boolean =
+        savePending(persist)
+
     @Synchronized
     fun savePending(persist: (Track, List<LyricsLine>) -> Boolean): Boolean {
         val draft = pendingDraft ?: return true
