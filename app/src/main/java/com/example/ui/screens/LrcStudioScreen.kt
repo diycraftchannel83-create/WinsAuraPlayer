@@ -66,6 +66,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -112,6 +113,7 @@ fun LrcStudioScreen(
     onTogglePlayPause: () -> Unit,
     onSeekTo: (Long) -> Unit,
     onSaveLyrics: (Track, List<LyricsLine>) -> Unit,
+    onDraftChanged: (Track, List<LyricsLine>) -> Unit = { _, _ -> },
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -127,6 +129,7 @@ fun LrcStudioScreen(
 
     // Always read the latest editor draft when the current song changes or the studio closes.
     val latestLines = rememberUpdatedState(lines)
+    SideEffect { onDraftChanged(track, lines) }
     val latestSaveLyrics = rememberUpdatedState(onSaveLyrics)
     DisposableEffect(track.id) {
         onDispose {
