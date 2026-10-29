@@ -120,11 +120,13 @@ fun MainAppContent(
     val storagePermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { grants ->
-        val audioReadGranted = grants.values.any { it } ||
-            (Build.VERSION.SDK_INT >= 33 &&
-                ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_AUDIO) == PackageManager.PERMISSION_GRANTED) ||
-            (Build.VERSION.SDK_INT < 33 &&
-                ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)
+        val readPermission = if (Build.VERSION.SDK_INT >= 33) {
+            Manifest.permission.READ_MEDIA_AUDIO
+        } else {
+            Manifest.permission.READ_EXTERNAL_STORAGE
+        }
+        val audioReadGranted = grants[readPermission] == true ||
+            ContextCompat.checkSelfPermission(context, readPermission) == PackageManager.PERMISSION_GRANTED
         if (!audioReadGranted) {
             Toast.makeText(
                 context,
