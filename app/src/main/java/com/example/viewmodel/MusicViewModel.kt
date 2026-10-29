@@ -9,6 +9,7 @@ import com.example.audio.PlaybackService
 import com.example.data.MusicCatalog
 import com.example.data.Id3TagEditor
 import com.example.data.LrcStorageHelper
+import com.example.data.LrcDraftCoordinator
 import com.example.model.LyricsLine
 import com.example.model.LrcParser
 import com.example.model.Mp3Metadata
@@ -41,30 +42,57 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     private val _isLrcStudioOpen = MutableStateFlow(false)
     val isLrcStudioOpen: StateFlow<Boolean> = _isLrcStudioOpen.asStateFlow()
     fun openLrcStudio() { _isLrcStudioOpen.value = true }
-    fun closeLrcStudio() { _isLrcStudioOpen.value = false }
-
-    // Latest editor draft is held here so track-change actions can persist it
-    // synchronously before AudioPlayerManager switches the active song.
-    private var lrcStudioDraft: Pair<Track, List<LyricsLine>>? = null
-
-    fun updateLrcStudioDraft(track: Track, lines: List<LyricsLine>) {
-        lrcStudioDraft = track to lines.toList()
+    fun closeLrcStudio() {
+        // Do not dismiss the editor if the last draft could not be persisted.
+        if (lrcDraftCoordinator.savePending(::saveAndApplyLyrics)) {
+            _isLrcStudioOpen.value = false
+        } else {
+            _lrcSaveMessage.value = "Lirik belum tersimpan. Draft dipertahankan; periksa penyimpanan lalu coba lagi."
+        }
     }
 
-    fun saveAndApplyLyrics(track: Track, lines: List<LyricsLine>): File {
-        val content = LrcParser.formatToLrc(lines, track.artist, track.title)
-        val file = LrcStorageHelper.saveLrcFile(
-            context = getApplication(),
-            artist = track.artist,
-            title = track.title,
-            lrcContent = content
-        )
-        val updated = _allTracks.value.map { if (it.id == track.id) it.copy(lyricsLrc = content) else it }
-        _allTracks.value = updated
-        if (lrcStudioDraft?.first?.id == track.id) lrcStudioDraft = null
-        MusicCatalog.saveTracks(getApplication(), updated)
-        if (currentTrack.value?.id == track.id) playerManager.updateCurrentTrackLyrics(content)
-        return file
+    // Shared guard for Next, Previous, auto-next, track selection, and editor close.
+    private val lrcDraftCoordinator = LrcDraftCoordinator()
+
+    private val _lrcSaveMessage = MutableStateFlow<String?>(null)
+    val lrcSaveMessage: StateFlow<String?> = _lrcSaveMessage.asStateFlow()
+    fun clearLrcSaveMessage() { _lrcSaveMessage.value = null }
+
+    fun updateLrcStudioDraft(track: Track, lines: List<LyricsLine>) {
+        lrcDraftCoordinator.update(track, lines)
+    }
+
+    /**
+     * Returns true only after the LRC file has been written and verified.
+     * The coordinator clears the draft only after this function succeeds.
+     */
+    fun saveAndApplyLyrics(track: Track, lines: List<LyricsLine>): Boolean {
+        return try {
+            val content = LrcParser.formatToLrc(lines, track.artist, track.title)
+            val file = LrcStorageHelper.saveLrcFile(
+                context = getApplication(),
+                artist = track.artist,
+                title = track.title,
+                lrcContent = content
+            )
+            check(file.isFile && file.readText() == content) {
+                "File LRC tidak dapat diverifikasi setelah penyimpanan."
+            }
+
+            val updated = _allTracks.value.map { if (it.id == track.id) it.copy(lyricsLrc = content) else it }
+            MusicCatalog.saveTracks(getApplication(), updated)
+            _allTracks.value = updated
+            if (currentTrack.value?.id == track.id) playerManager.updateCurrentTrackLyrics(content)
+
+            // This is deliberately last: failures above must leave the draft recoverable.
+            lrcDraftCoordinator.clearSavedTrack(track.id)
+            _lrcSaveMessage.value = null
+            true
+        } catch (error: Exception) {
+            Log.e("WinsAuraPlayer", "LRC save failed; keeping the draft", error)
+            _lrcSaveMessage.value = "Gagal menyimpan lirik. Draft tetap dipertahankan; periksa ruang penyimpanan dan coba lagi."
+            false
+        }
     }
 
     private val playerManager = AudioPlayerManager(application)
@@ -159,15 +187,11 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun playTrack(track: Track) {
-        // Persist the latest editor draft for its original track before switching Now Playing.
-        // Do not rely on currentTrack/UI recomposition timing: a fast Next action can arrive first.
-        val draft = lrcStudioDraft
-        if (draft != null && draft.first.id != track.id && draft.second.isNotEmpty()) {
-            try {
-                saveAndApplyLyrics(draft.first, draft.second)
-            } catch (error: Exception) {
-                Log.e("WinsAuraPlayer", "LRC autosave before track change failed", error)
-            }
+        // Every playback transition uses the same guard. If persistence fails, keep the
+        // current track and editor draft instead of switching away and losing the user's work.
+        if (!lrcDraftCoordinator.savePending(::saveAndApplyLyrics)) {
+            _lrcSaveMessage.value = "Pergantian lagu dibatalkan karena lirik belum tersimpan. Draft tetap aman; coba simpan lagi."
+            return
         }
         val saved = LrcStorageHelper.loadExistingLrc(getApplication(), track.artist, track.title)
         val trackToPlay = if (!saved.isNullOrBlank()) track.copy(lyricsLrc = saved) else track
