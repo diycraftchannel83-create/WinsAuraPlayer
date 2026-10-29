@@ -106,8 +106,13 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     fun openMetadataEditor(track: Track) { _editingTrack.value = track }
     fun closeMetadataEditor() { _editingTrack.value = null }
 
+    private val _metadataSaveMessage = MutableStateFlow<String?>(null)
+    val metadataSaveMessage: StateFlow<String?> = _metadataSaveMessage.asStateFlow()
+    fun clearMetadataSaveMessage() { _metadataSaveMessage.value = null }
+
     fun saveTrackMetadata(track: Track, metadata: Mp3Metadata) {
         viewModelScope.launch {
+            _metadataSaveMessage.value = null
             val result = withContext(Dispatchers.IO) { Id3TagEditor.writeMetadata(getApplication(), track, metadata) }
             result.onSuccess { updatedTrack ->
                 val updated = _allTracks.value.map { if (it.id == track.id) updatedTrack else it }
@@ -115,7 +120,11 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
                 MusicCatalog.saveTracks(getApplication(), updated)
                 playerManager.updateCurrentTrackMetadata(updatedTrack)
                 _editingTrack.value = null
-            }.onFailure { error -> Log.e("WinsAuraPlayer", "Metadata save failed", error) }
+                _metadataSaveMessage.value = "Metadata berhasil disimpan ke file audio."
+            }.onFailure { error ->
+                Log.e("WinsAuraPlayer", "Metadata save failed", error)
+                _metadataSaveMessage.value = "Metadata gagal disimpan ke file audio: ${error.message ?: "periksa izin tulis file"}"
+            }
         }
     }
 

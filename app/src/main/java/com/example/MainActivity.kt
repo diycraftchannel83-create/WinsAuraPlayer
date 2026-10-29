@@ -112,6 +112,7 @@ fun MainAppContent(
     val isScanningMedia by viewModel.isScanningMedia.collectAsStateWithLifecycle()
     val scanMessage by viewModel.scanMessage.collectAsStateWithLifecycle()
     val lrcSaveMessage by viewModel.lrcSaveMessage.collectAsStateWithLifecycle()
+    val metadataSaveMessage by viewModel.metadataSaveMessage.collectAsStateWithLifecycle()
 
     // Android's audio-session Visualizer requires RECORD_AUDIO permission on many devices.
     val context = LocalContext.current
@@ -133,6 +134,13 @@ fun MainAppContent(
         if (!message.isNullOrBlank()) {
             Toast.makeText(context, message, Toast.LENGTH_LONG).show()
             viewModel.clearLrcSaveMessage()
+        }
+    }
+    LaunchedEffect(metadataSaveMessage) {
+        val message = metadataSaveMessage
+        if (!message.isNullOrBlank()) {
+            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+            viewModel.clearMetadataSaveMessage()
         }
     }
     var visualizerPermissionRequested by remember { mutableStateOf(false) }
