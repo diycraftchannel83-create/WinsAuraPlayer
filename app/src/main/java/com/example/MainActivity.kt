@@ -133,23 +133,23 @@ fun MainAppContent(
     LaunchedEffect(metadataWritePermissionRequest) {
         val request = metadataWritePermissionRequest ?: return@LaunchedEffect
         try {
-            val sender = request.actionIntentSender ?: if (
+            // Android 11+: always create a fresh MediaStore write request.
+            // A stale/missing recoverable-exception sender can prevent the consent UI.
+            val sender = if (
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+                request.uri.scheme == "content" &&
                 request.uri.authority == MediaStore.AUTHORITY
             ) {
                 MediaStore.createWriteRequest(context.contentResolver, listOf(request.uri)).intentSender
             } else {
-                null
+                request.actionIntentSender
             }
             if (sender != null) {
                 metadataWritePermissionLauncher.launch(IntentSenderRequest.Builder(sender).build())
             } else {
-                Toast.makeText(
-                    context,
-                    "Android tidak menyediakan dialog izin tulis untuk lokasi file ini. Pilih ulang file melalui pemilih dokumen, lalu coba lagi.",
-                    Toast.LENGTH_LONG
-                ).show()
-                viewModel.cancelMetadataWritePermissionRequest()
+                val message = "Izin tulis tidak dapat diminta untuk file ini. URI: " + request.uri
+                Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                viewModel.reportMetadataWritePermissionError(message)
             }
         } catch (error: Exception) {
             Toast.makeText(
