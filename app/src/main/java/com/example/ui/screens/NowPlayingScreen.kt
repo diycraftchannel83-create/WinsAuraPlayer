@@ -132,6 +132,7 @@ fun NowPlayingScreen(
     onToggleTheme: () -> Unit = {},
     onOpenLrcStudio: () -> Unit = {},
     onOpenMetadataEditor: (Track) -> Unit = {},
+    onImmersiveModeChanged: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     if (track == null) {
@@ -161,6 +162,7 @@ fun NowPlayingScreen(
 
     var centerMode by remember { mutableStateOf(CenterDisplayMode.ALBUM_ART) }
     var fullScreenStage by remember { mutableStateOf(FullScreenStage.NORMAL) }
+    LaunchedEffect(fullScreenStage) { onImmersiveModeChanged(fullScreenStage != FullScreenStage.NORMAL) }
     var isShuffle by remember { mutableStateOf(false) }
 
     val infiniteTransition = rememberInfiniteTransition(label = "screen_disc_rotation")
