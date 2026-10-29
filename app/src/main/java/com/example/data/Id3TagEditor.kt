@@ -11,9 +11,12 @@ import com.example.model.Mp3Metadata
 import com.example.model.Track
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.BufferedInputStream
+import java.io.BufferedOutputStream
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.InputStream
+import java.io.IOException
 import java.nio.charset.StandardCharsets
 
 object Id3TagEditor {
@@ -110,8 +113,11 @@ object Id3TagEditor {
 
             if (isLocalUri) {
                 val uri = Uri.parse(track.audioUrl)
+                val id3WriteSucceeded = tryWriteId3Bytes(context, uri, metadata)
+                if (!id3WriteSucceeded) {
+                    throw IOException("Tag MP3 gagal ditulis atau validasi pemutaran gagal.")
+                }
                 updateMediaStore(context, uri, metadata)
-                tryWriteId3Bytes(context, uri, metadata)
             }
 
             // Persist custom album art if selected from photo picker (content://)
@@ -182,32 +188,106 @@ object Id3TagEditor {
         }
     }
 
-    private fun tryWriteId3Bytes(context: Context, uri: Uri, metadata: Mp3Metadata) {
+    /**
+     * Streams the MP3 through temporary files. Audio bytes are never loaded wholesale into memory.
+     * The original is retained for rollback until the new ID3 header, title and audio duration validate.
+     */
+    private fun tryWriteId3Bytes(context: Context, uri: Uri, metadata: Mp3Metadata): Boolean {
+        val staged = File.createTempFile("id3-stage-", ".mp3", context.cacheDir)
+        val backup = File.createTempFile("id3-backup-", ".mp3", context.cacheDir)
+        var backupReady = false
         try {
-            val pfd = context.contentResolver.openFileDescriptor(uri, "rw") ?: return
-            pfd.use { descriptor ->
-                val fis = FileInputStream(descriptor.fileDescriptor)
-                val existingBytes = fis.readBytes()
-                fis.close()
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                FileOutputStream(backup).use { output -> input.copyTo(output, DEFAULT_BUFFER_SIZE) }
+            } ?: throw IOException("Tidak dapat membaca file sumber.")
+            backupReady = backup.length() > 0L
 
-                val audioStartOffset = findAudioStreamOffset(existingBytes)
-                val audioData = if (audioStartOffset < existingBytes.size) {
-                    existingBytes.copyOfRange(audioStartOffset, existingBytes.size)
-                } else {
-                    existingBytes
+            FileInputStream(backup).use { rawInput ->
+                BufferedInputStream(rawInput).use { input ->
+                    val header = ByteArray(10)
+                    val headerCount = readUpTo(input, header)
+                    val audioOffset = if (headerCount == 10) findAudioStreamOffset(header) else 0
+                    if (audioOffset > 10) skipFully(input, (audioOffset - 10).toLong())
+                    FileOutputStream(staged).use { rawOutput ->
+                        BufferedOutputStream(rawOutput).use { output ->
+                            output.write(buildId3v2Tag(metadata))
+                            input.copyTo(output, DEFAULT_BUFFER_SIZE)
+                            output.flush()
+                        }
+                    }
                 }
-
-                val newId3Block = buildId3v2Tag(metadata)
-
-                val fos = FileOutputStream(descriptor.fileDescriptor)
-                fos.channel.truncate(0)
-                fos.write(newId3Block)
-                fos.write(audioData)
-                fos.flush()
-                fos.close()
             }
-        } catch (e: Exception) {
-            Log.w(TAG, "Direct ID3 byte write not permitted or failed: ${e.message}")
+            if (staged.length() <= buildId3v2Tag(metadata).size.toLong()) {
+                throw IOException("Data audio kosong setelah penulisan tag.")
+            }
+
+            context.contentResolver.openOutputStream(uri, "wt")?.use { output ->
+                FileInputStream(staged).use { input -> input.copyTo(output, DEFAULT_BUFFER_SIZE) }
+                output.flush()
+            } ?: throw IOException("Penyimpanan tidak mengizinkan penulisan file.")
+
+            if (!validateWrittenFile(context, uri, metadata)) {
+                throw IOException("Validasi tag atau durasi audio gagal setelah penulisan.")
+            }
+            return true
+        } catch (error: Exception) {
+            Log.e(TAG, "MP3 tag write/validation failed for $uri; attempting rollback", error)
+            if (backupReady) {
+                try {
+                    context.contentResolver.openOutputStream(uri, "wt")?.use { output ->
+                        FileInputStream(backup).use { input -> input.copyTo(output, DEFAULT_BUFFER_SIZE) }
+                        output.flush()
+                    } ?: Log.e(TAG, "Rollback failed: output stream unavailable for $uri")
+                } catch (rollbackError: Exception) {
+                    Log.e(TAG, "Critical: failed to restore original audio file $uri", rollbackError)
+                }
+            }
+            return false
+        } finally {
+            staged.delete()
+            backup.delete()
+        }
+    }
+
+    private fun validateWrittenFile(context: Context, uri: Uri, metadata: Mp3Metadata): Boolean {
+        val header = ByteArray(10)
+        val headerRead = context.contentResolver.openInputStream(uri)?.use { readUpTo(it, header) } ?: return false
+        if (headerRead != 10 || header[0] != 'I'.code.toByte() ||
+            header[1] != 'D'.code.toByte() || header[2] != '3'.code.toByte()) return false
+
+        val retriever = MediaMetadataRetriever()
+        return try {
+            retriever.setDataSource(context, uri)
+            val duration = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L
+            val actualTitle = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE)
+            duration > 0L && (metadata.title.isBlank() || actualTitle == metadata.title)
+        } catch (error: Exception) {
+            Log.w(TAG, "Cannot verify MP3 playback metadata for $uri: ${error.message}")
+            false
+        } finally {
+            try { retriever.release() } catch (_: Exception) { }
+        }
+    }
+
+    private fun readUpTo(input: InputStream, buffer: ByteArray): Int {
+        var total = 0
+        while (total < buffer.size) {
+            val count = input.read(buffer, total, buffer.size - total)
+            if (count < 0) break
+            total += count
+        }
+        return total
+    }
+
+    private fun skipFully(input: InputStream, count: Long) {
+        var remaining = count
+        while (remaining > 0L) {
+            val skipped = input.skip(remaining)
+            if (skipped > 0L) remaining -= skipped
+            else {
+                if (input.read() < 0) throw IOException("File terpotong saat melewati tag ID3 lama.")
+                remaining--
+            }
         }
     }
 
