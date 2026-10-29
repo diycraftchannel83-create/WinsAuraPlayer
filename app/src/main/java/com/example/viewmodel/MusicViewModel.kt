@@ -43,7 +43,7 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     fun openLrcStudio() { _isLrcStudioOpen.value = true }
     fun closeLrcStudio() {
         // Do not dismiss the editor if the last draft could not be persisted.
-        if (lrcDraftCoordinator.savePending(::saveAndApplyLyrics)) {
+        if (lrcDraftCoordinator.saveBeforeEditorClose(::saveAndApplyLyrics)) {
             _isLrcStudioOpen.value = false
         } else {
             _lrcSaveMessage.value = "Lirik belum tersimpan. Draft dipertahankan; periksa penyimpanan lalu coba lagi."
@@ -188,7 +188,7 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     fun playTrack(track: Track) {
         // Every playback transition uses the same guard. If persistence fails, keep the
         // current track and editor draft instead of switching away and losing the user's work.
-        if (!lrcDraftCoordinator.savePending(::saveAndApplyLyrics)) {
+        if (!lrcDraftCoordinator.saveBeforeTrackSwitch(::saveAndApplyLyrics)) {
             _lrcSaveMessage.value = "Pergantian lagu dibatalkan karena lirik belum tersimpan. Draft tetap aman; coba simpan lagi."
             return
         }
