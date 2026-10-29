@@ -191,6 +191,25 @@ jobs:
             echo "# WinsAuraPlayer $VERSION"
             echo
             echo "## Patch notes"
+            echo
+            echo "### Player, notifications, and stability"
+            echo "- Notification player styling updated to a black background with neon-cyan Play/Pause, Previous, Next, and Stop controls."
+            echo "- Album artwork decoding is bounded to reduce memory pressure; notification artwork falls back safely when embedded or launcher artwork is unavailable."
+            echo "- Fixed a force-close path where an adaptive launcher icon could return null from BitmapFactory.decodeResource while building the playback notification."
+            echo "- Added defensive handling around notification action callbacks and notification updates."
+            echo "- Added a visible Edit Metadata shortcut in the Now Playing header."
+            echo
+            echo "### LRC Studio and synchronized lyrics"
+            echo "- Automatically save the current LRC Studio draft before Now Playing switches to another track."
+            echo "- Save synchronized lyrics against the original track ID so a track change cannot attach the outgoing draft to the newly playing song."
+            echo "- Track the latest edited lyric lines and timestamps while LRC Studio is active, and autosave a non-empty draft when the editor closes."
+            echo "- Keep the manual Save action available to save and apply lyrics on demand."
+            echo
+            echo "### Build and maintenance"
+            echo "- Corrected artwork-cache sizing so the Kotlin code compiles with Android LruCache."
+            echo "- Added a safe bitmap-rendering fallback for launcher artwork and bounded embedded-cover decoding."
+            echo
+            echo "### Commit history"
             if [[ -n "$NOTES_BASE" ]]; then
               git log --no-merges --pretty=format:'- %s' "$NOTES_BASE"..HEAD
             else
