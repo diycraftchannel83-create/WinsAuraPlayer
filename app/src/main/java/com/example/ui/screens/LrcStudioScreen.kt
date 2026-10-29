@@ -67,14 +67,11 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -114,7 +111,7 @@ fun LrcStudioScreen(
     durationMs: Long,
     onTogglePlayPause: () -> Unit,
     onSeekTo: (Long) -> Unit,
-    onSaveLyrics: (Track, List<LyricsLine>) -> Unit,
+    onSaveLyrics: (Track, List<LyricsLine>) -> Boolean,
     onDraftChanged: (Track, List<LyricsLine>) -> Unit = { _, _ -> },
     onClose: () -> Unit,
     modifier: Modifier = Modifier
@@ -129,24 +126,13 @@ fun LrcStudioScreen(
         mutableStateOf(parsed)
     }
 
-    // Always read the latest editor draft when the current song changes or the studio closes.
-    val latestLines = rememberUpdatedState(lines)
-    // Publish each edit immediately, not only after a later recomposition. This prevents a fast
-    // Next/Previous action from switching tracks before the last sync timestamp reaches the ViewModel.
-    SideEffect { onDraftChanged(track, lines.toList()) }
+    // Publish the initial draft when a track enters the editor. Subsequent edits are
+    // published immediately by updateLines(), avoiding stale drafts being re-added on
+    // unrelated recompositions while the editor is closing.
+    LaunchedEffect(track.id) { onDraftChanged(track, lines.toList()) }
     fun updateLines(updatedLines: List<LyricsLine>) {
         lines = updatedLines
         onDraftChanged(track, updatedLines.toList())
-    }
-    val latestSaveLyrics = rememberUpdatedState(onSaveLyrics)
-    DisposableEffect(track.id) {
-        onDispose {
-            val draft = latestLines.value
-            if (draft.isNotEmpty()) {
-                // Save against the track this editor instance belonged to, not the newly playing track.
-                latestSaveLyrics.value(track, draft)
-            }
-        }
     }
 
     var activeLineIndex by remember { mutableIntStateOf(0) }
@@ -267,14 +253,16 @@ fun LrcStudioScreen(
                                 Toast.makeText(context, "Lirik masih kosong!", Toast.LENGTH_SHORT).show()
                                 return@Button
                             }
-                            onSaveLyrics(track, lines)
-                            val filename = LrcStorageHelper.buildLrcFilename(track.artist, track.title)
-                            Toast.makeText(
-                                context,
-                                "Disimpan ke folder internal winsplayerlrc/$filename",
-                                Toast.LENGTH_LONG
-                            ).show()
-                            onClose()
+                            val saved = onSaveLyrics(track, lines)
+                            if (saved) {
+                                val filename = LrcStorageHelper.buildLrcFilename(track.artist, track.title)
+                                Toast.makeText(
+                                    context,
+                                    "Lirik tersimpan: winsplayerlrc/$filename",
+                                    Toast.LENGTH_LONG
+                                ).show()
+                                onClose()
+                            }
                         },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = NeonCyan,

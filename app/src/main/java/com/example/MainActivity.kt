@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.Build
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -107,9 +108,17 @@ fun MainAppContent(
     val editingTrack by viewModel.editingTrack.collectAsStateWithLifecycle()
     val isScanningMedia by viewModel.isScanningMedia.collectAsStateWithLifecycle()
     val scanMessage by viewModel.scanMessage.collectAsStateWithLifecycle()
+    val lrcSaveMessage by viewModel.lrcSaveMessage.collectAsStateWithLifecycle()
 
     // Android's audio-session Visualizer requires RECORD_AUDIO permission on many devices.
     val context = LocalContext.current
+    LaunchedEffect(lrcSaveMessage) {
+        val message = lrcSaveMessage
+        if (!message.isNullOrBlank()) {
+            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+            viewModel.clearLrcSaveMessage()
+        }
+    }
     var visualizerPermissionRequested by remember { mutableStateOf(false) }
     val visualizerPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -429,7 +438,7 @@ fun MainAppContent(
                 durationMs = durationMs,
                 onTogglePlayPause = { viewModel.togglePlayPause() },
                 onSeekTo = { viewModel.seekTo(it) },
-                onSaveLyrics = { song, lines -> viewModel.saveAndApplyLyrics(song, lines) },
+                onSaveLyrics = { song, lines -> viewModel.saveExplicitLyrics(song, lines) },
                 onDraftChanged = { song, lines -> viewModel.updateLrcStudioDraft(song, lines) },
                 onClose = { viewModel.closeLrcStudio() }
             )

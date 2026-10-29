@@ -204,6 +204,10 @@ jobs:
             echo "- Save synchronized lyrics against the original track ID so a track change cannot attach the outgoing draft to the newly playing song."
             echo "- Track the latest edited lyric lines and timestamps while LRC Studio is active, and autosave a non-empty draft when the editor closes."
             echo "- Keep the manual Save action available to save and apply lyrics on demand."
+            echo "- Verify the saved LRC file contents before reporting success or clearing the pending draft."
+            echo "- Cancel Next, Previous, auto-next, and track selection when draft persistence fails; retain the draft for retry."
+            echo "- Keep LRC Studio open after a failed close-save and show a clear error message instead of silently discarding edits."
+            echo "- Add regression tests for Next, Previous, auto-next retry, editor close, and newer edits arriving during a save."
             echo
             echo "### Build and maintenance"
             echo "- Corrected artwork-cache sizing so the Kotlin code compiles with Android LruCache."
