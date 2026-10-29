@@ -16,7 +16,7 @@ android {
     applicationId = "com.winsmediatama.winsauraplayer"
     minSdk = 24
     targetSdk = 36
-    versionCode = 29
+    versionCode = 30
     versionName = "1.0.1"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
