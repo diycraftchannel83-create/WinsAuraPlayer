@@ -461,17 +461,16 @@ fun NowPlayingScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(verticalArrangement = Arrangement.Center) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text("WinsAura", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
-                    Text("Player", fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = NeonCyan)
-                    Icon(Icons.Default.GraphicEq, contentDescription = null, tint = AccentAmber, modifier = Modifier.size(20.dp))
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text("WinsAura", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+                    Text("Player", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = NeonCyan)
                 }
                 Text(
-                    text = "MUSIC BEYOND SOUND  •  SEDANG MEMUTAR",
-                    fontSize = 8.sp,
+                    text = "MUSIC BEYOND SOUND",
+                    fontSize = 7.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextTertiary,
-                    letterSpacing = 1.1.sp
+                    letterSpacing = 1.sp
                 )
             }
 
