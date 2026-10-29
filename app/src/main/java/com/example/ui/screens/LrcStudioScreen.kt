@@ -262,12 +262,6 @@ fun LrcStudioScreen(
                                     Toast.LENGTH_LONG
                                 ).show()
                                 onClose()
-                            } else {
-                                Toast.makeText(
-                                    context,
-                                    "Gagal menyimpan lirik. Draft tetap dipertahankan; coba lagi.",
-                                    Toast.LENGTH_LONG
-                                ).show()
                             }
                         },
                         colors = ButtonDefaults.buttonColors(
