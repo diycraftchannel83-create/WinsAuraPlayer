@@ -130,14 +130,40 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
         _metadataSaveMessage.value = "Izin tulis tidak diberikan. Metadata audio belum diubah."
     }
 
+    // MediaStore write consent is granted for a specific URI. Skip the proactive
+    // request exactly once after the user approves, then attempt the actual file write.
+    private var approvedMetadataWriteUri: String? = null
+
     fun retryPendingMetadataSave() {
         val pending = pendingMetadataWrite
         pendingMetadataWrite = null
         _metadataWritePermissionRequest.value = null
-        if (pending != null) saveTrackMetadata(pending.first, pending.second)
+        if (pending != null) {
+            approvedMetadataWriteUri = pending.first.audioUrl
+            saveTrackMetadata(pending.first, pending.second)
+        }
     }
 
     fun saveTrackMetadata(track: Track, metadata: Mp3Metadata) {
+        val uri = Uri.parse(track.audioUrl)
+        val alreadyApproved = approvedMetadataWriteUri == track.audioUrl
+        if (alreadyApproved) approvedMetadataWriteUri = null
+
+        // Android 11+ requires explicit user consent before modifying MediaStore
+        // items owned by another app. Request it before opening the URI for writing;
+        // waiting for a SecurityException is unreliable because providers may report
+        // the denial as an IOException/FileNotFoundException instead.
+        if (!alreadyApproved &&
+            android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R &&
+            uri.scheme == "content" &&
+            uri.authority == android.provider.MediaStore.AUTHORITY
+        ) {
+            pendingMetadataWrite = track to metadata
+            _metadataWritePermissionRequest.value = MetadataWritePermissionRequest(uri = uri)
+            _metadataSaveMessage.value = "Meminta izin Android untuk mengubah file audio. Setujui dialog yang muncul."
+            return
+        }
+
         viewModelScope.launch {
             _metadataSaveMessage.value = null
             val result = withContext(Dispatchers.IO) {
