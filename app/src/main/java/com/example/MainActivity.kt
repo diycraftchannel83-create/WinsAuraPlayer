@@ -157,7 +157,9 @@ fun MainAppContent(
                 "Tidak dapat meminta izin tulis file audio: ${error.message ?: "kesalahan tidak diketahui"}",
                 Toast.LENGTH_LONG
             ).show()
-            viewModel.cancelMetadataWritePermissionRequest()
+            viewModel.reportMetadataWritePermissionError(
+                "Permintaan izin tulis Android gagal: ${error.javaClass.simpleName}: ${error.message ?: "kesalahan tidak diketahui"}"
+            )
         }
     }
     val storagePermissionLauncher = rememberLauncherForActivityResult(
