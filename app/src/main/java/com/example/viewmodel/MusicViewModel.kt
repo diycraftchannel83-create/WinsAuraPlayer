@@ -43,6 +43,14 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     fun openLrcStudio() { _isLrcStudioOpen.value = true }
     fun closeLrcStudio() { _isLrcStudioOpen.value = false }
 
+    // Latest editor draft is held here so track-change actions can persist it
+    // synchronously before AudioPlayerManager switches the active song.
+    private var lrcStudioDraft: Pair<Track, List<LyricsLine>>? = null
+
+    fun updateLrcStudioDraft(track: Track, lines: List<LyricsLine>) {
+        lrcStudioDraft = track to lines.toList()
+    }
+
     fun saveAndApplyLyrics(track: Track, lines: List<LyricsLine>): File {
         val content = LrcParser.formatToLrc(lines, track.artist, track.title)
         val file = LrcStorageHelper.saveLrcFile(
@@ -53,6 +61,7 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
         )
         val updated = _allTracks.value.map { if (it.id == track.id) it.copy(lyricsLrc = content) else it }
         _allTracks.value = updated
+        if (lrcStudioDraft?.first?.id == track.id) lrcStudioDraft = null
         MusicCatalog.saveTracks(getApplication(), updated)
         if (currentTrack.value?.id == track.id) playerManager.updateCurrentTrackLyrics(content)
         return file
@@ -150,6 +159,18 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun playTrack(track: Track) {
+        val previousTrack = currentTrack.value
+        if (_isLrcStudioOpen.value && previousTrack != null && previousTrack.id != track.id) {
+            val draft = lrcStudioDraft
+            if (draft != null && draft.first.id == previousTrack.id && draft.second.isNotEmpty()) {
+                try {
+                    // Persist the outgoing song's synchronized lyrics before changing Now Playing.
+                    saveAndApplyLyrics(draft.first, draft.second)
+                } catch (error: Exception) {
+                    Log.e("WinsAuraPlayer", "LRC autosave before track change failed", error)
+                }
+            }
+        }
         val saved = LrcStorageHelper.loadExistingLrc(getApplication(), track.artist, track.title)
         val trackToPlay = if (!saved.isNullOrBlank()) track.copy(lyricsLrc = saved) else track
         playerManager.playTrack(trackToPlay)
