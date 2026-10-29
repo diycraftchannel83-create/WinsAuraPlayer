@@ -61,6 +61,12 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
         lrcDraftCoordinator.update(track, lines)
     }
 
+    fun saveExplicitLyrics(track: Track, lines: List<LyricsLine>): Boolean {
+        val saved = saveAndApplyLyrics(track, lines)
+        if (saved) lrcDraftCoordinator.clearSavedDraft(track, lines)
+        return saved
+    }
+
     /**
      * Returns true only after the LRC file has been written and verified.
      * The coordinator clears the draft only after this function succeeds.
@@ -83,8 +89,7 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
             _allTracks.value = updated
             if (currentTrack.value?.id == track.id) playerManager.updateCurrentTrackLyrics(content)
 
-            // This is deliberately last: failures above must leave the draft recoverable.
-            lrcDraftCoordinator.clearSavedTrack(track.id)
+            // The coordinator clears only the exact draft after this verified save returns.
             _lrcSaveMessage.value = null
             true
         } catch (error: Exception) {
