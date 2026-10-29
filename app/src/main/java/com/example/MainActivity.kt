@@ -429,7 +429,7 @@ fun MainAppContent(
                 durationMs = durationMs,
                 onTogglePlayPause = { viewModel.togglePlayPause() },
                 onSeekTo = { viewModel.seekTo(it) },
-                onSaveLyrics = { lines -> viewModel.saveAndApplyLyrics(activeSong, lines) },
+                onSaveLyrics = { song, lines -> viewModel.saveAndApplyLyrics(song, lines) },
                 onClose = { viewModel.closeLrcStudio() }
             )
         }
