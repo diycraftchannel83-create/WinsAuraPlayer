@@ -13,7 +13,6 @@ import com.example.data.LrcDraftCoordinator
 import com.example.model.LyricsLine
 import com.example.model.LrcParser
 import com.example.model.Mp3Metadata
-import java.io.File
 import com.example.model.DspSettings
 import com.example.model.Track
 import com.example.model.VisualizerMode
