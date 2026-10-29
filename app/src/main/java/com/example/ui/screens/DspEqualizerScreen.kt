@@ -88,13 +88,13 @@ fun DspEqualizerScreen(
         ) {
             Column {
                 Text(
-                    text = "AuraSound DSP Studio",
+                    text = "WinsAuraPlayer Audio FX",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
                 )
                 Text(
-                    text = "10-Band EQ, Bass Booster & Dolby 3D Spatializer",
+                    text = "LUXURY NEON AUDIO STUDIO  •  10-BAND EQ & SPATIAL FX",
                     style = MaterialTheme.typography.bodySmall,
                     color = TextSecondary
                 )
