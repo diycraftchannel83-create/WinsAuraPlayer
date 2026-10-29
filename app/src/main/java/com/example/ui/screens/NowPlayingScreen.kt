@@ -335,7 +335,14 @@ fun NowPlayingScreen(
                         .padding(horizontal = 18.dp, vertical = 2.dp),
                     horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("S E D A N G   M E M U T A R", color = TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
+                    Column(verticalArrangement = Arrangement.Center) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("WinsAura", color = TextPrimary, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold)
+                            Text("Player", color = NeonCyan, fontSize = 17.sp, fontWeight = FontWeight.ExtraBold)
+                            Icon(Icons.Default.GraphicEq, contentDescription = null, tint = AccentAmber, modifier = Modifier.size(20.dp))
+                        }
+                        Text("M U S I C   B E Y O N D   S O U N D", color = TextTertiary, fontSize = 8.sp, letterSpacing = 2.sp)
+                    }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         IconButton(onClick = onToggleTheme, modifier = Modifier.testTag("theme_toggle_button")) {
                             Icon(if (isDarkMode) Icons.Default.LightMode else Icons.Default.DarkMode, "Ganti tema", tint = if (isDarkMode) AccentAmber else NeonCyan)
@@ -453,10 +460,14 @@ fun NowPlayingScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
+            Column(verticalArrangement = Arrangement.Center) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text("WinsAura", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
+                    Text("Player", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = NeonCyan)
+                }
                 Text(
-                    text = "SEDANG MEMUTAR",
-                    fontSize = 11.sp,
+                    text = "MUSIC BEYOND SOUND",
+                    fontSize = 7.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextTertiary,
                     letterSpacing = 1.sp

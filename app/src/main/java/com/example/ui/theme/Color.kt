@@ -3,10 +3,10 @@ package com.example.ui.theme
 import androidx.compose.ui.graphics.Color
 
 // Dark Theme Palette
-val StudioDarkBg = Color(0xFF0A0D14)
-val StudioSurface = Color(0xFF111622)
-val StudioCard = Color(0xFF182030)
-val StudioCardElevated = Color(0xFF222C42)
+val StudioDarkBg = Color(0xFF05070D)
+val StudioSurface = Color(0xFF0B1020)
+val StudioCard = Color(0xFF101A2C)
+val StudioCardElevated = Color(0xFF18263D)
 
 val TextPrimary = Color(0xFFF0F4FC)
 val TextSecondary = Color(0xFF98A6C0)
@@ -32,6 +32,7 @@ val NeonCyanDark = Color(0xFF00838F)
 val NeonCyanDim = Color(0xFF0094A8)
 val ElectricBlue = Color(0xFF4FACFE)
 val ElectricBlueDark = Color(0xFF0277BD)
-val AccentAmber = Color(0xFFFFB703)
+val AccentAmber = Color(0xFFFFD166)
 val AccentMagenta = Color(0xFFF72585)
 val AccentGreen = Color(0xFF00F5D4)
+val AccentViolet = Color(0xFFA855F7)
