@@ -539,7 +539,7 @@ fun LrcStudioScreen(
                                         // Record timestamp
                                         val updated = lines.toMutableList()
                                         updated[activeLineIndex] = currentLine.copy(timestampMs = currentPositionMs)
-                                        lines = updated
+                                        updateLines(updated)
                                         // Auto advance to next line
                                         if (activeLineIndex < lines.lastIndex) {
                                             activeLineIndex++
@@ -598,7 +598,7 @@ fun LrcStudioScreen(
                                                 val updated = lines.toMutableList()
                                                 val newTime = (currentLine.timestampMs - 500L).coerceAtLeast(0L)
                                                 updated[activeLineIndex] = currentLine.copy(timestampMs = newTime)
-                                                lines = updated
+                                                updateLines(updated)
                                             }
                                         }
                                         .padding(horizontal = 8.dp, vertical = 6.dp)
@@ -616,7 +616,7 @@ fun LrcStudioScreen(
                                                 val updated = lines.toMutableList()
                                                 val newTime = currentLine.timestampMs + 500L
                                                 updated[activeLineIndex] = currentLine.copy(timestampMs = newTime)
-                                                lines = updated
+                                                updateLines(updated)
                                             }
                                         }
                                         .padding(horizontal = 8.dp, vertical = 6.dp)
@@ -805,7 +805,7 @@ fun LrcStudioScreen(
                                 onClick = {
                                     val updated = lines.toMutableList()
                                     updated.removeAt(index)
-                                    lines = updated
+                                    updateLines(updated)
                                     if (activeLineIndex >= lines.size && lines.isNotEmpty()) {
                                         activeLineIndex = lines.lastIndex
                                     }
@@ -863,7 +863,7 @@ fun LrcStudioScreen(
                         if (rawText.isNotBlank()) {
                             val parsed = LrcParser.parsePlainOrLrc(rawText)
                             if (parsed.isNotEmpty()) {
-                                lines = parsed
+                                updateLines(parsed)
                                 activeLineIndex = 0
                                 Toast.makeText(context, "${parsed.size} baris berhasil dimuat", Toast.LENGTH_SHORT).show()
                             }
@@ -911,7 +911,7 @@ fun LrcStudioScreen(
                         val updated = lines.toMutableList()
                         if (index in updated.indices) {
                             updated[index] = updated[index].copy(text = lineText.trim())
-                            lines = updated
+                            updateLines(updated)
                         }
                         showEditLineDialog = null
                     },
@@ -955,7 +955,7 @@ fun LrcStudioScreen(
                         if (newLineText.isNotBlank()) {
                             val updated = lines.toMutableList()
                             updated.add(LyricsLine(currentPositionMs, newLineText.trim()))
-                            lines = updated
+                            updateLines(updated)
                             activeLineIndex = updated.lastIndex
                         }
                         showAddLineDialog = false
