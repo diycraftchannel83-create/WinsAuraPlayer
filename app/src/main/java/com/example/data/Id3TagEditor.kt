@@ -16,6 +16,7 @@ import java.io.BufferedOutputStream
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.InputStream
+import java.io.OutputStream
 import java.io.IOException
 import java.nio.charset.StandardCharsets
 
@@ -111,14 +112,20 @@ object Id3TagEditor {
         return try {
             val isLocalUri = !track.isOnline && (track.audioUrl.startsWith("content://") || track.audioUrl.startsWith("file://") || track.audioUrl.startsWith("/"))
 
-            if (isLocalUri) {
-                val uri = Uri.parse(track.audioUrl)
-                val id3WriteSucceeded = tryWriteId3Bytes(context, uri, metadata)
-                if (!id3WriteSucceeded) {
-                    throw IOException("Tag MP3 gagal ditulis atau validasi pemutaran gagal.")
-                }
-                updateMediaStore(context, uri, metadata)
+            if (!isLocalUri) {
+                throw IOException("Metadata hanya dapat ditulis langsung ke file audio lokal.")
             }
+            val parsedUri = Uri.parse(track.audioUrl)
+            val uri = if (parsedUri.scheme.isNullOrBlank() || track.audioUrl.startsWith("/")) {
+                Uri.fromFile(File(track.audioUrl))
+            } else {
+                parsedUri
+            }
+            val id3WriteSucceeded = tryWriteId3Bytes(context, uri, metadata)
+            if (!id3WriteSucceeded) {
+                throw IOException("Tag MP3 gagal ditulis atau validasi pemutaran gagal. Periksa izin tulis file audio.")
+            }
+            updateMediaStore(context, uri, metadata)
 
             // Persist custom album art if selected from photo picker (content://)
             var finalCoverUrl = metadata.coverUrl
@@ -197,9 +204,9 @@ object Id3TagEditor {
         val backup = File.createTempFile("id3-backup-", ".mp3", context.cacheDir)
         var backupReady = false
         try {
-            context.contentResolver.openInputStream(uri)?.use { input ->
+            openAudioInput(context, uri).use { input ->
                 FileOutputStream(backup).use { output -> input.copyTo(output, DEFAULT_BUFFER_SIZE) }
-            } ?: throw IOException("Tidak dapat membaca file sumber.")
+            }
             backupReady = backup.length() > 0L
 
             FileInputStream(backup).use { rawInput ->
@@ -227,10 +234,10 @@ object Id3TagEditor {
                 throw IOException("Data audio kosong setelah penulisan tag.")
             }
 
-            context.contentResolver.openOutputStream(uri, "wt")?.use { output ->
+            openAudioOutput(context, uri).use { output ->
                 FileInputStream(staged).use { input -> input.copyTo(output, DEFAULT_BUFFER_SIZE) }
                 output.flush()
-            } ?: throw IOException("Penyimpanan tidak mengizinkan penulisan file.")
+            }
 
             if (!validateWrittenFile(context, uri, metadata)) {
                 throw IOException("Validasi tag atau durasi audio gagal setelah penulisan.")
@@ -240,10 +247,10 @@ object Id3TagEditor {
             Log.e(TAG, "MP3 tag write/validation failed for $uri; attempting rollback", error)
             if (backupReady) {
                 try {
-                    context.contentResolver.openOutputStream(uri, "wt")?.use { output ->
+                    openAudioOutput(context, uri).use { output ->
                         FileInputStream(backup).use { input -> input.copyTo(output, DEFAULT_BUFFER_SIZE) }
                         output.flush()
-                    } ?: Log.e(TAG, "Rollback failed: output stream unavailable for $uri")
+                    }
                 } catch (rollbackError: Exception) {
                     Log.e(TAG, "Critical: failed to restore original audio file $uri", rollbackError)
                 }
@@ -255,9 +262,29 @@ object Id3TagEditor {
         }
     }
 
+    private fun openAudioInput(context: Context, uri: Uri): InputStream {
+        return if (uri.scheme == "file") {
+            val path = uri.path ?: throw IOException("Path file audio kosong.")
+            FileInputStream(File(path))
+        } else {
+            context.contentResolver.openInputStream(uri)
+                ?: throw IOException("Tidak dapat membaca file audio: $uri")
+        }
+    }
+
+    private fun openAudioOutput(context: Context, uri: Uri): OutputStream {
+        return if (uri.scheme == "file") {
+            val path = uri.path ?: throw IOException("Path file audio kosong.")
+            FileOutputStream(File(path), false)
+        } else {
+            context.contentResolver.openOutputStream(uri, "wt")
+                ?: throw IOException("Penyimpanan tidak mengizinkan penulisan file audio: $uri")
+        }
+    }
+
     private fun validateWrittenFile(context: Context, uri: Uri, metadata: Mp3Metadata): Boolean {
         val header = ByteArray(10)
-        val headerRead = context.contentResolver.openInputStream(uri)?.use { readUpTo(it, header) } ?: return false
+        val headerRead = openAudioInput(context, uri).use { readUpTo(it, header) }
         if (headerRead != 10 || header[0] != 'I'.code.toByte() ||
             header[1] != 'D'.code.toByte() || header[2] != '3'.code.toByte()) return false
 
@@ -320,7 +347,9 @@ object Id3TagEditor {
 
         fun writeTextFrame(frameId: String, text: String) {
             if (text.isBlank()) return
-            val textBytes = text.toByteArray(StandardCharsets.UTF_8)
+            // ID3v2.3 does not support UTF-8 encoding flag 3. UTF-16 is valid and
+            // reliably read by Android metadata readers, including for non-ASCII text.
+            val textBytes = text.toByteArray(StandardCharsets.UTF_16)
             // Frame Header: ID (4 bytes), Size (4 bytes), Flags (2 bytes)
             framesOut.write(frameId.toByteArray(StandardCharsets.US_ASCII))
             val payloadSize = 1 + textBytes.size // 1 byte encoding + text
@@ -330,13 +359,13 @@ object Id3TagEditor {
             framesOut.write(payloadSize and 0xFF)
             framesOut.write(0) // Flag 1
             framesOut.write(0) // Flag 2
-            framesOut.write(3) // UTF-8 encoding
+            framesOut.write(1) // UTF-16 with BOM, valid for ID3v2.3
             framesOut.write(textBytes)
         }
 
         fun writeCommentFrame(comment: String) {
             if (comment.isBlank()) return
-            val commentBytes = comment.toByteArray(StandardCharsets.UTF_8)
+            val commentBytes = comment.toByteArray(StandardCharsets.UTF_16)
             framesOut.write("COMM".toByteArray(StandardCharsets.US_ASCII))
             val payloadSize = 1 + 3 + 1 + commentBytes.size // enc (1) + lang (3) + short desc null (1) + comment
             framesOut.write((payloadSize shr 24) and 0xFF)
@@ -345,7 +374,7 @@ object Id3TagEditor {
             framesOut.write(payloadSize and 0xFF)
             framesOut.write(0)
             framesOut.write(0)
-            framesOut.write(3) // UTF-8
+            framesOut.write(1) // UTF-16 with BOM
             framesOut.write("eng".toByteArray(StandardCharsets.US_ASCII))
             framesOut.write(0) // empty short description terminator
             framesOut.write(commentBytes)
