@@ -130,6 +130,12 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
         _metadataSaveMessage.value = "Izin tulis tidak diberikan. Metadata audio belum diubah."
     }
 
+    fun reportMetadataWritePermissionError(message: String) {
+        pendingMetadataWrite = null
+        _metadataWritePermissionRequest.value = null
+        _metadataSaveMessage.value = message
+    }
+
     // MediaStore write consent is granted for a specific URI. Skip the proactive
     // request exactly once after the user approves, then attempt the actual file write.
     private var approvedMetadataWriteUri: String? = null
