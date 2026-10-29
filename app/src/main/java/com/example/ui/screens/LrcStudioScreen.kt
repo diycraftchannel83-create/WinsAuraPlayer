@@ -14,6 +14,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,6 +25,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -129,7 +131,13 @@ fun LrcStudioScreen(
 
     // Always read the latest editor draft when the current song changes or the studio closes.
     val latestLines = rememberUpdatedState(lines)
-    SideEffect { onDraftChanged(track, lines) }
+    // Publish each edit immediately, not only after a later recomposition. This prevents a fast
+    // Next/Previous action from switching tracks before the last sync timestamp reaches the ViewModel.
+    SideEffect { onDraftChanged(track, lines.toList()) }
+    fun updateLines(updatedLines: List<LyricsLine>) {
+        updateLines(updated)Lines
+        onDraftChanged(track, updatedLines.toList())
+    }
     val latestSaveLyrics = rememberUpdatedState(onSaveLyrics)
     DisposableEffect(track.id) {
         onDispose {
@@ -167,7 +175,7 @@ fun LrcStudioScreen(
                 if (!content.isNullOrBlank()) {
                     val parsed = LrcParser.parsePlainOrLrc(content)
                     if (parsed.isNotEmpty()) {
-                        lines = parsed
+                        updateLines(parsed)
                         activeLineIndex = 0
                         Toast.makeText(context, "${parsed.size} baris lirik berhasil diimpor", Toast.LENGTH_SHORT).show()
                     }
@@ -273,7 +281,8 @@ fun LrcStudioScreen(
                             contentColor = StudioDarkBg
                         ),
                         shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.testTag("lrc_save_and_apply_button")
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                        modifier = Modifier.height(36.dp).widthIn(min = 0.dp).testTag("lrc_save_and_apply_button")
                     ) {
                         Icon(
                             imageVector = Icons.Default.Save,
@@ -338,7 +347,7 @@ fun LrcStudioScreen(
                 OutlinedButton(
                     onClick = {
                         // Reset all timestamps to 0
-                        lines = lines.map { it.copy(timestampMs = 0L) }
+                        updateLines(lines.map { it.copy(timestampMs = 0L) })
                         activeLineIndex = 0
                         Toast.makeText(context, "Semua waktu lirik di-reset ke awal", Toast.LENGTH_SHORT).show()
                     },
