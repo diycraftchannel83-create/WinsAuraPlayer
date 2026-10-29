@@ -1,6 +1,9 @@
 package com.example.viewmodel
 
 import android.app.Application
+import android.app.RecoverableSecurityException
+import android.content.IntentSender
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.ads.AdMobManager
@@ -25,6 +28,11 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import android.util.Log
+
+data class MetadataWritePermissionRequest(
+    val uri: Uri,
+    val actionIntentSender: IntentSender? = null
+)
 
 enum class RepeatMode { OFF, ALL, ONE }
 
@@ -110,11 +118,34 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     val metadataSaveMessage: StateFlow<String?> = _metadataSaveMessage.asStateFlow()
     fun clearMetadataSaveMessage() { _metadataSaveMessage.value = null }
 
+    private val _metadataWritePermissionRequest = MutableStateFlow<MetadataWritePermissionRequest?>(null)
+    val metadataWritePermissionRequest: StateFlow<MetadataWritePermissionRequest?> =
+        _metadataWritePermissionRequest.asStateFlow()
+
+    private var pendingMetadataWrite: Pair<Track, Mp3Metadata>? = null
+
+    fun cancelMetadataWritePermissionRequest() {
+        pendingMetadataWrite = null
+        _metadataWritePermissionRequest.value = null
+        _metadataSaveMessage.value = "Izin tulis tidak diberikan. Metadata audio belum diubah."
+    }
+
+    fun retryPendingMetadataSave() {
+        val pending = pendingMetadataWrite
+        pendingMetadataWrite = null
+        _metadataWritePermissionRequest.value = null
+        if (pending != null) saveTrackMetadata(pending.first, pending.second)
+    }
+
     fun saveTrackMetadata(track: Track, metadata: Mp3Metadata) {
         viewModelScope.launch {
             _metadataSaveMessage.value = null
-            val result = withContext(Dispatchers.IO) { Id3TagEditor.writeMetadata(getApplication(), track, metadata) }
+            val result = withContext(Dispatchers.IO) {
+                Id3TagEditor.writeMetadata(getApplication(), track, metadata)
+            }
             result.onSuccess { updatedTrack ->
+                pendingMetadataWrite = null
+                _metadataWritePermissionRequest.value = null
                 val updated = _allTracks.value.map { if (it.id == track.id) updatedTrack else it }
                 _allTracks.value = updated
                 MusicCatalog.saveTracks(getApplication(), updated)
@@ -123,7 +154,19 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
                 _metadataSaveMessage.value = "Metadata berhasil disimpan ke file audio."
             }.onFailure { error ->
                 Log.e("WinsAuraPlayer", "Metadata save failed", error)
-                _metadataSaveMessage.value = "Metadata gagal disimpan ke file audio: ${error.message ?: "periksa izin tulis file"}"
+                val recoverable = error as? RecoverableSecurityException
+                if (error is SecurityException && track.audioUrl.startsWith("content://")) {
+                    pendingMetadataWrite = track to metadata
+                    _metadataWritePermissionRequest.value = MetadataWritePermissionRequest(
+                        uri = Uri.parse(track.audioUrl),
+                        actionIntentSender = recoverable?.userAction?.actionIntent?.intentSender
+                    )
+                    _metadataSaveMessage.value =
+                        "File audio memerlukan izin tulis. Setujui permintaan Android agar metadata dapat disimpan."
+                } else {
+                    _metadataSaveMessage.value =
+                        "Metadata gagal disimpan ke file audio: ${error.message ?: "periksa izin tulis file"}"
+                }
             }
         }
     }
