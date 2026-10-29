@@ -206,11 +206,17 @@ object Id3TagEditor {
                 BufferedInputStream(rawInput).use { input ->
                     val header = ByteArray(10)
                     val headerCount = readUpTo(input, header)
-                    val audioOffset = if (headerCount == 10) findAudioStreamOffset(header) else 0
-                    if (audioOffset > 10) skipFully(input, (audioOffset - 10).toLong())
+                    val hasId3Header = headerCount == 10 &&
+                        header[0] == 'I'.code.toByte() &&
+                        header[1] == 'D'.code.toByte() &&
+                        header[2] == '3'.code.toByte()
+                    val audioOffset = if (hasId3Header) findAudioStreamOffset(header) else 0
+                    if (hasId3Header && audioOffset > 10) skipFully(input, (audioOffset - 10).toLong())
                     FileOutputStream(staged).use { rawOutput ->
                         BufferedOutputStream(rawOutput).use { output ->
                             output.write(buildId3v2Tag(metadata))
+                            // If the source had no ID3 tag, preserve the initial bytes already read.
+                            if (!hasId3Header && headerCount > 0) output.write(header, 0, headerCount)
                             input.copyTo(output, DEFAULT_BUFFER_SIZE)
                             output.flush()
                         }
