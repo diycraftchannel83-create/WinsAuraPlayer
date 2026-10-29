@@ -65,11 +65,13 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -109,7 +111,7 @@ fun LrcStudioScreen(
     durationMs: Long,
     onTogglePlayPause: () -> Unit,
     onSeekTo: (Long) -> Unit,
-    onSaveLyrics: (List<LyricsLine>) -> Unit,
+    onSaveLyrics: (Track, List<LyricsLine>) -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -121,6 +123,19 @@ fun LrcStudioScreen(
     var lines by remember(track.id, track.lyricsLrc) {
         val parsed = LrcParser.parsePlainOrLrc(track.lyricsLrc)
         mutableStateOf(parsed)
+    }
+
+    // Always read the latest editor draft when the current song changes or the studio closes.
+    val latestLines = rememberUpdatedState(lines)
+    val latestSaveLyrics = rememberUpdatedState(onSaveLyrics)
+    DisposableEffect(track.id) {
+        onDispose {
+            val draft = latestLines.value
+            if (draft.isNotEmpty()) {
+                // Save against the track this editor instance belonged to, not the newly playing track.
+                latestSaveLyrics.value(track, draft)
+            }
+        }
     }
 
     var activeLineIndex by remember { mutableIntStateOf(0) }
@@ -241,7 +256,7 @@ fun LrcStudioScreen(
                                 Toast.makeText(context, "Lirik masih kosong!", Toast.LENGTH_SHORT).show()
                                 return@Button
                             }
-                            onSaveLyrics(lines)
+                            onSaveLyrics(track, lines)
                             val filename = LrcStorageHelper.buildLrcFilename(track.artist, track.title)
                             Toast.makeText(
                                 context,
