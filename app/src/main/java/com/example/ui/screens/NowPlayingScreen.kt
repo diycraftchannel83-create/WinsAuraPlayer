@@ -338,13 +338,6 @@ fun NowPlayingScreen(
                     color = TextTertiary,
                     letterSpacing = 1.sp
                 )
-                Text(
-                    text = displayAlbum,
-                    fontSize = 13.sp,
-                    color = TextSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
