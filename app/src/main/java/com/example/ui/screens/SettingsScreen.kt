@@ -63,8 +63,8 @@ fun SettingsScreen(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text("Pengaturan", style = MaterialTheme.typography.headlineMedium)
-        Text("Atur bahasa, metadata lagu, dan sinkronisasi lirik.", style = MaterialTheme.typography.bodyMedium)
+        Text("WinsAuraPlayer Settings", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.tertiary)
+        Text("Luxury Neon Edition • Atur bahasa, metadata lagu, dan sinkronisasi lirik.", style = MaterialTheme.typography.bodyMedium)
 
         Card(onClick = { languageMenu = true }, modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
             Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
