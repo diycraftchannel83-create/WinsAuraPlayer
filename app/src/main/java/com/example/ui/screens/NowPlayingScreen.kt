@@ -323,6 +323,125 @@ fun NowPlayingScreen(
                 )
         )
 
+
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        if (maxWidth > maxHeight) {
+            // Landscape reference layout: artwork on the left, playback details on the right.
+            Column(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 8.dp)) {
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
+                        .background(StudioDarkBg.copy(alpha = 0.76f))
+                        .border(1.dp, DividerColor, RoundedCornerShape(16.dp))
+                        .padding(horizontal = 18.dp, vertical = 2.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("S E D A N G   M E M U T A R", color = TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = onToggleTheme, modifier = Modifier.testTag("theme_toggle_button")) {
+                            Icon(if (isDarkMode) Icons.Default.LightMode else Icons.Default.DarkMode, "Ganti tema", tint = if (isDarkMode) AccentAmber else NeonCyan)
+                        }
+                        IconButton(onClick = { onOpenMetadataEditor(track) }, modifier = Modifier.testTag("now_playing_metadata_editor_button")) {
+                            Icon(Icons.Default.Edit, "Edit metadata", tint = NeonCyan)
+                        }
+                        IconButton(onClick = onShowAd, modifier = Modifier.testTag("trigger_interstitial_button")) {
+                            Text("ADS", color = AccentAmber, fontWeight = FontWeight.Bold, modifier = Modifier.background(AccentAmber.copy(alpha = 0.16f), RoundedCornerShape(6.dp)).padding(7.dp))
+                        }
+                        IconButton(onClick = onOpenLrcStudio, modifier = Modifier.testTag("open_lrc_studio_button")) {
+                            Icon(Icons.Default.Lyrics, "Buka LRC Studio", tint = NeonCyan)
+                        }
+                        IconButton(onClick = onOpenDsp, modifier = Modifier.testTag("now_playing_dsp_button")) {
+                            Icon(Icons.Default.GraphicEq, "Audio FX", tint = NeonCyan)
+                        }
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                Row(Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(24.dp), verticalAlignment = Alignment.CenterVertically) {
+                    BoxWithConstraints(Modifier.weight(0.9f).fillMaxSize(), contentAlignment = Alignment.Center) {
+                        when (centerMode) {
+                            CenterDisplayMode.ALBUM_ART -> {
+                                Box(Modifier.size(minOf(maxWidth * 0.94f, maxHeight * 0.88f)).shadow(22.dp, CircleShape).clip(CircleShape)
+                                    .border(3.dp, NeonCyan, CircleShape).rotate(if (isPlaying) rotationAngle else 0f), contentAlignment = Alignment.Center) {
+                                    AudioCoverImage(track, track.title, ContentScale.Crop, Modifier.fillMaxSize())
+                                    Box(Modifier.size(34.dp).background(StudioDarkBg, CircleShape).border(2.dp, NeonCyan, CircleShape))
+                                }
+                                if (currentLyricLine.isNotBlank()) {
+                                    Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth(0.96f).clip(RoundedCornerShape(14.dp))
+                                        .background(StudioDarkBg.copy(alpha = 0.9f)).border(1.dp, NeonCyan, RoundedCornerShape(14.dp))
+                                        .padding(horizontal = 12.dp, vertical = 8.dp), contentAlignment = Alignment.Center) {
+                                        Text(currentLyricLine, color = NeonCyan, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                                    }
+                                }
+                            }
+                            CenterDisplayMode.VISUALIZER -> AudioVisualizerView(amplitudes, visualizerMode, isPlaying, Modifier.fillMaxSize())
+                            CenterDisplayMode.LYRICS -> SynchronizedLyricsView(parsedLyrics, (currentPositionMs + lyricsSyncOffsetMs).coerceAtLeast(0L), onSeekTo, Modifier.fillMaxSize())
+                        }
+                    }
+                    Column(Modifier.weight(1.2f).fillMaxSize(), verticalArrangement = Arrangement.Center) {
+                        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(15.dp)).background(StudioCard).padding(3.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+                            CenterDisplayMode.entries.forEach { mode ->
+                                val selected = centerMode == mode
+                                val label = when (mode) { CenterDisplayMode.ALBUM_ART -> "Sampul"; CenterDisplayMode.VISUALIZER -> "Visualizer"; CenterDisplayMode.LYRICS -> "Lirik Lagu" }
+                                Box(Modifier.weight(1f).clip(RoundedCornerShape(11.dp)).background(if (selected) NeonCyan else Color.Transparent)
+                                    .clickable { centerMode = mode }.padding(vertical = 9.dp), contentAlignment = Alignment.Center) {
+                                    Text(label, color = if (selected) StudioDarkBg else TextSecondary, fontSize = 13.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium)
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(10.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text(displayTitle, color = TextPrimary, fontSize = 27.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(displayArtist, color = NeonCyan, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(displayAlbum.ifBlank { "Album tidak diketahui" }, color = AccentAmber, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(Icons.Default.MusicNote, "Album", tint = TextSecondary)
+                                AudioCoverImage(track, "Sampul album", ContentScale.Crop, Modifier.padding(top = 4.dp).size(72.dp).clip(RoundedCornerShape(9.dp)))
+                            }
+                        }
+                        Spacer(Modifier.height(10.dp))
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Box(Modifier.weight(1f).clip(RoundedCornerShape(8.dp)).background(AccentMagenta.copy(alpha = 0.18f)).padding(8.dp), contentAlignment = Alignment.Center) {
+                                Text("≋ BASS " + if (dspSettings.isBassBoostEnabled) "+" + (dspSettings.bassBoostStrength / 10f).toInt() + "%" else "OFF", color = AccentMagenta, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                            }
+                            Box(Modifier.weight(1f).clip(RoundedCornerShape(8.dp)).background(NeonCyan.copy(alpha = 0.14f)).padding(8.dp), contentAlignment = Alignment.Center) {
+                                Text("◧ DOLBY " + if (dspSettings.isVirtualizerEnabled) (dspSettings.virtualizerStrength / 10f).toInt().toString() + "%" else "OFF", color = NeonCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                            }
+                            Box(Modifier.weight(1.2f).clip(RoundedCornerShape(8.dp)).background(AccentAmber.copy(alpha = 0.15f)).clickable { onOpenDsp() }.padding(8.dp), contentAlignment = Alignment.Center) {
+                                Text("EQ: " + dspSettings.currentPresetName, color = AccentAmber, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                        }
+                        Spacer(Modifier.height(7.dp))
+                        val landscapeDuration = if (durationMs > 0L) durationMs else 1L
+                        Slider(value = currentPositionMs.coerceIn(0L, landscapeDuration).toFloat(), onValueChange = { onSeekTo(it.toLong()) },
+                            valueRange = 0f..landscapeDuration.toFloat(), colors = SliderDefaults.colors(thumbColor = NeonCyan, activeTrackColor = NeonCyan, inactiveTrackColor = DividerColor),
+                            modifier = Modifier.fillMaxWidth().testTag("screen_playback_seek_slider"))
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text(formatDuration(currentPositionMs), color = TextTertiary, fontSize = 11.sp)
+                            Text(formatDuration(durationMs), color = TextTertiary, fontSize = 11.sp)
+                        }
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(onClick = { isShuffle = !isShuffle }, modifier = Modifier.testTag("screen_shuffle_button")) {
+                                Icon(Icons.Default.Shuffle, "Acak", tint = if (isShuffle) NeonCyan else TextTertiary)
+                            }
+                            IconButton(onClick = onPrevious, modifier = Modifier.size(44.dp).testTag("screen_previous_button")) {
+                                Icon(Icons.Default.SkipPrevious, "Sebelumnya", tint = TextPrimary, modifier = Modifier.size(28.dp))
+                            }
+                            Box(Modifier.size(70.dp).background(Brush.linearGradient(listOf(NeonCyan, ElectricBlue)), CircleShape).clickable { onTogglePlayPause() }.testTag("screen_play_pause_button"), contentAlignment = Alignment.Center) {
+                                Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, if (isPlaying) "Jeda" else "Putar", tint = StudioDarkBg, modifier = Modifier.size(38.dp))
+                            }
+                            IconButton(onClick = onNext, modifier = Modifier.size(44.dp).testTag("screen_next_button")) {
+                                Icon(Icons.Default.SkipNext, "Berikutnya", tint = TextPrimary, modifier = Modifier.size(28.dp))
+                            }
+                            IconButton(onClick = onToggleRepeat, modifier = Modifier.testTag("screen_repeat_button")) {
+                                Icon(if (repeatMode == RepeatMode.ONE) Icons.Default.RepeatOne else Icons.Default.Repeat, "Ulangi", tint = if (repeatMode != RepeatMode.OFF) NeonCyan else TextTertiary)
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -880,6 +999,7 @@ fun NowPlayingScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
     }
+        }
 
         // Immersive three-stage player: cover + synced lyrics -> visualizer + lyrics -> normal UI.
         if (fullScreenStage != FullScreenStage.NORMAL) {
