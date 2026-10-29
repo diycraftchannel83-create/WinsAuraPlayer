@@ -2,6 +2,8 @@ package com.example
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.content.IntentSender
+import android.provider.MediaStore
 import android.os.Bundle
 import android.os.Build
 import android.widget.Toast
@@ -9,6 +11,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.IntentSenderRequest
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
@@ -113,10 +116,50 @@ fun MainAppContent(
     val scanMessage by viewModel.scanMessage.collectAsStateWithLifecycle()
     val lrcSaveMessage by viewModel.lrcSaveMessage.collectAsStateWithLifecycle()
     val metadataSaveMessage by viewModel.metadataSaveMessage.collectAsStateWithLifecycle()
+    val metadataWritePermissionRequest by viewModel.metadataWritePermissionRequest.collectAsStateWithLifecycle()
 
     // Request audio-library access on first launch. Android 10+ uses scoped storage:
     // broad write access is not available; editing protected MediaStore files needs a per-file grant.
     val context = LocalContext.current
+    val metadataWritePermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            viewModel.retryPendingMetadataSave()
+        } else {
+            viewModel.cancelMetadataWritePermissionRequest()
+        }
+    }
+    LaunchedEffect(metadataWritePermissionRequest) {
+        val request = metadataWritePermissionRequest ?: return@LaunchedEffect
+        try {
+            val sender = request.actionIntentSender ?: if (
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+                request.uri.authority == MediaStore.AUTHORITY
+            ) {
+                MediaStore.createWriteRequest(context.contentResolver, listOf(request.uri)).intentSender
+            } else {
+                null
+            }
+            if (sender != null) {
+                metadataWritePermissionLauncher.launch(IntentSenderRequest.Builder(sender).build())
+            } else {
+                Toast.makeText(
+                    context,
+                    "Android tidak menyediakan dialog izin tulis untuk lokasi file ini. Pilih ulang file melalui pemilih dokumen, lalu coba lagi.",
+                    Toast.LENGTH_LONG
+                ).show()
+                viewModel.cancelMetadataWritePermissionRequest()
+            }
+        } catch (error: Exception) {
+            Toast.makeText(
+                context,
+                "Tidak dapat meminta izin tulis file audio: ${error.message ?: "kesalahan tidak diketahui"}",
+                Toast.LENGTH_LONG
+            ).show()
+            viewModel.cancelMetadataWritePermissionRequest()
+        }
+    }
     val storagePermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { grants ->
