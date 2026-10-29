@@ -52,7 +52,6 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import com.example.ads.AdMobManager
 import com.example.ui.components.AppOpenAdDialog
 import com.example.ui.components.BottomBannerAd
