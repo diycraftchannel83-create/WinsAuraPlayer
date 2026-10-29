@@ -16,7 +16,7 @@ import java.io.IOException
  *
  * Android 10+: public files are accessed through MediaStore in the top-level
  * shared-storage folder "WinsLyric" (no broad storage permission required).
- * Android 9 and older: use the public Downloads/WinsLyric directory directly.
+ * Android 9 and older: use the public root folder /WinsLyric directly.
  * An internal copy is retained as a reliable app-private fallback.
  */
 object LrcStorageHelper {
@@ -68,8 +68,7 @@ object LrcStorageHelper {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 writeSharedMediaStore(appContext, filename, lrcContent)
             } else {
-                val downloads = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-                val publicDir = File(downloads, FOLDER_NAME)
+                val publicDir = File(Environment.getExternalStorageDirectory(), FOLDER_NAME)
                 if (!publicDir.exists() && !publicDir.mkdirs()) {
                     throw IOException("Folder publik WinsLyric tidak dapat dibuat.")
                 }
@@ -93,8 +92,7 @@ object LrcStorageHelper {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 readSharedMediaStore(appContext, filename)?.takeIf { it.isNotBlank() }?.let { return it }
             } else {
-                val downloads = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-                File(File(downloads, FOLDER_NAME), filename).takeIf { it.isFile && it.length() > 0L }
+                File(File(Environment.getExternalStorageDirectory(), FOLDER_NAME), filename).takeIf { it.isFile && it.length() > 0L }
                     ?.let { return it.readText(Charsets.UTF_8) }
             }
         } catch (error: Exception) {
